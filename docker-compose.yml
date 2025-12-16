@@ -1,0 +1,28 @@
+services:
+  # Frontend React
+  frontend:
+    build:
+      context: .
+      target: development
+    container_name: react-frontend
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    env_file:
+      - .env
+    environment:
+      - VITE_API_URL=/api
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL:-}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY:-}
+      - VITE_API_TARGET=${VITE_API_TARGET:-}
+    volumes:
+      - .:/app
+      - /app/node_modules
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    external: true
+
+
