@@ -13,6 +13,35 @@ export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  // Função para validar qualidade da senha
+  const validatePassword = (pwd: string): string | null => {
+    if (pwd.length < 6) {
+      return 'A senha deve ter pelo menos 6 caracteres';
+    }
+
+    const hasUpperCase = /[A-Z]/.test(pwd);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwd);
+    const hasNumber = /[0-9]/.test(pwd);
+
+    const missingRequirements: string[] = [];
+    
+    if (!hasUpperCase) {
+      missingRequirements.push('uma letra maiúscula');
+    }
+    if (!hasSpecialChar) {
+      missingRequirements.push('um caractere especial');
+    }
+    if (!hasNumber) {
+      missingRequirements.push('um número');
+    }
+
+    if (missingRequirements.length > 0) {
+      return `A senha deve conter pelo menos ${missingRequirements.join(', ')}`;
+    }
+
+    return null;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -22,8 +51,9 @@ export default function Register() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres');
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
       return;
     }
 
@@ -132,6 +162,29 @@ export default function Register() {
                   placeholder="••••••••"
                 />
               </div>
+              {password && (
+                <div className="mt-2 p-3 rounded-lg bg-neutral-50 border border-neutral-200 text-xs">
+                  <p className="text-neutral-600 font-medium mb-2">Requisitos da senha:</p>
+                  <ul className="space-y-1 text-neutral-500">
+                    <li className={`flex items-center gap-2 ${password.length >= 6 ? 'text-green-600' : ''}`}>
+                      <span>{password.length >= 6 ? '✓' : '○'}</span>
+                      Mínimo de 6 caracteres
+                    </li>
+                    <li className={`flex items-center gap-2 ${/[A-Z]/.test(password) ? 'text-green-600' : ''}`}>
+                      <span>{/[A-Z]/.test(password) ? '✓' : '○'}</span>
+                      Uma letra maiúscula
+                    </li>
+                    <li className={`flex items-center gap-2 ${/[0-9]/.test(password) ? 'text-green-600' : ''}`}>
+                      <span>{/[0-9]/.test(password) ? '✓' : '○'}</span>
+                      Um número
+                    </li>
+                    <li className={`flex items-center gap-2 ${/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? 'text-green-600' : ''}`}>
+                      <span>{/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) ? '✓' : '○'}</span>
+                      Um caractere especial (!@#$%^&*...)
+                    </li>
+                  </ul>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
