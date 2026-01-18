@@ -4,12 +4,22 @@ import { authService } from './authService';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
+// Log de diagnóstico (apenas em desenvolvimento)
+if (import.meta.env.DEV) {
+  console.log('[Supabase Config] Verificando configuração...');
+  console.log('[Supabase Config] VITE_SUPABASE_URL:', supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'NÃO DEFINIDO');
+  console.log('[Supabase Config] VITE_SUPABASE_ANON_KEY:', supabaseAnonKey ? `${supabaseAnonKey.substring(0, 30)}...` : 'NÃO DEFINIDO');
+}
+
 // Verificar se as variáveis estão configuradas
 const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 
 if (!isSupabaseConfigured) {
   console.warn('⚠️ Variáveis de ambiente do Supabase não configuradas. Verifique VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY');
   console.warn('⚠️ Funcionalidades de upload de imagens estarão desabilitadas até que as variáveis sejam configuradas.');
+  console.warn('⚠️ Se as variáveis estão no Docker, pode ser necessário reiniciar o container: docker-compose restart frontend');
+} else {
+  console.log('✅ Configuração do Supabase carregada com sucesso');
 }
 
 // Cliente base do Supabase - inicialização condicional
@@ -23,8 +33,12 @@ const initializeSupabase = (): SupabaseClient | null => {
   if (!supabaseInstance) {
     try {
       supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
-    } catch (error) {
-      console.error('Erro ao inicializar cliente Supabase:', error);
+      console.log('[Supabase] Cliente inicializado com sucesso');
+    } catch (error: any) {
+      console.error('[Supabase] Erro ao inicializar cliente Supabase:', {
+        message: error.message,
+        url: supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : 'undefined',
+      });
       return null;
     }
   }
@@ -62,10 +76,12 @@ const getSupabaseToken = async (): Promise<string | null> => {
   try {
     // Verificar se o token está em cache e ainda é válido (válido por 50 minutos)
     if (cachedSupabaseToken && tokenExpiry && Date.now() < tokenExpiry) {
+      console.log('[Supabase Token] Usando token do cache');
       return cachedSupabaseToken;
     }
 
     // Buscar novo token do backend
+    console.log('[Supabase Token] Solicitando novo token do backend...');
     const token = await authService.getSupabaseToken();
     
     // Cachear o token por 50 minutos (tokens JWT geralmente expiram em 1 hora)
@@ -73,8 +89,12 @@ const getSupabaseToken = async (): Promise<string | null> => {
     tokenExpiry = Date.now() + 50 * 60 * 1000; // 50 minutos
     
     return token;
-  } catch (error) {
-    console.error('Erro ao obter token do Supabase:', error);
+  } catch (error: any) {
+    console.error('[Supabase Token] Erro ao obter token do Supabase:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
     // Limpar cache em caso de erro
     cachedSupabaseToken = null;
     tokenExpiry = null;
