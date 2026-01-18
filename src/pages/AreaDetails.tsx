@@ -6,7 +6,6 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   MapPin,
   Users,
-  DollarSign,
   ArrowLeft,
   ChevronLeft,
   ChevronRight,

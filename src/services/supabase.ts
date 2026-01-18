@@ -169,7 +169,7 @@ export const uploadImage = async (file: File, areaId: string): Promise<string> =
   const filePath = `${areaId}/${fileName}`;
 
   // Usar cliente autenticado para fazer upload
-  const { data: uploadData, error } = await authenticatedClient.storage
+  const { error } = await authenticatedClient.storage
     .from('area-images')
     .upload(filePath, file, {
       cacheControl: '3600',
@@ -179,26 +179,26 @@ export const uploadImage = async (file: File, areaId: string): Promise<string> =
   if (error) {
     console.error('Erro detalhado do upload:', {
       message: error.message,
-      statusCode: error.statusCode,
       error: error,
     });
     
     // Mensagens de erro mais específicas
-    if (error.statusCode === '400' || error.message?.includes('row-level security')) {
+    const errorMessage = error.message || '';
+    if (errorMessage.includes('row-level security') || errorMessage.includes('RLS')) {
       throw new Error(
         `Erro de política RLS: O Supabase Storage está bloqueando o upload devido às políticas de segurança. ` +
         `Verifique se as políticas RLS do bucket 'area-images' estão configuradas corretamente. ` +
         `A política de INSERT deve permitir usuários autenticados. ` +
-        `Mensagem: ${error.message}`
+        `Mensagem: ${errorMessage}`
       );
-    } else if (error.statusCode === '401' || error.statusCode === '403') {
+    } else if (errorMessage.includes('401') || errorMessage.includes('403') || errorMessage.includes('Unauthorized') || errorMessage.includes('Forbidden')) {
       throw new Error(
         `Erro de permissão: Você não tem permissão para fazer upload. ` +
         `Verifique se o token do Supabase está sendo gerado corretamente pelo backend. ` +
-        `Mensagem: ${error.message}`
+        `Mensagem: ${errorMessage}`
       );
     } else {
-      throw new Error(`Erro ao fazer upload: ${error.message} (Status: ${error.statusCode || 'desconhecido'})`);
+      throw new Error(`Erro ao fazer upload: ${errorMessage}`);
     }
   }
 

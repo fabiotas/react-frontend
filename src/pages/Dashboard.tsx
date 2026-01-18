@@ -154,10 +154,6 @@ export default function Dashboard() {
   };
 
   const weekends = getWeekendsInMonth();
-  const availableWeekends = weekends.filter((weekend) => {
-    const availability = checkWeekendAvailability(weekend);
-    return availability.some((a) => a.available);
-  });
 
   // Dados mensais dos últimos 6 meses
   const getMonthlyStats = (): MonthlyStats[] => {
