@@ -51,6 +51,15 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
+      - name: Set default VITE_API_URL
+        id: set-api-url
+        run: |
+          if [ -z "${{ secrets.VITE_API_URL }}" ]; then
+            echo "api_url=/api" >> $GITHUB_OUTPUT
+          else
+            echo "api_url=${{ secrets.VITE_API_URL }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -58,13 +67,12 @@ jobs:
           target: production
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
             VITE_SUPABASE_URL=${{ secrets.VITE_SUPABASE_URL }}
             VITE_SUPABASE_ANON_KEY=${{ secrets.VITE_SUPABASE_ANON_KEY }}
-            VITE_API_URL=${{ secrets.VITE_API_URL || '/api' }}
+            VITE_API_URL=${{ steps.set-api-url.outputs.api_url }}
 
       - name: Image digest
         run: echo "Image pushed with digest: ${{ steps.meta.outputs.digest }}"
