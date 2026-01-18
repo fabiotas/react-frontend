@@ -51,6 +51,19 @@ jobs:
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
 
+      - name: Verify secrets are set
+        run: |
+          if [ -z "${{ secrets.VITE_SUPABASE_URL }}" ]; then
+            echo "⚠️ Warning: VITE_SUPABASE_URL is not set in GitHub Secrets"
+          else
+            echo "✅ VITE_SUPABASE_URL is set"
+          fi
+          if [ -z "${{ secrets.VITE_SUPABASE_ANON_KEY }}" ]; then
+            echo "⚠️ Warning: VITE_SUPABASE_ANON_KEY is not set in GitHub Secrets"
+          else
+            echo "✅ VITE_SUPABASE_ANON_KEY is set"
+          fi
+
       - name: Set default VITE_API_URL
         id: set-api-url
         run: |

@@ -28,7 +28,7 @@ export default defineConfig({
         proxyTimeout: 10000,
         // Configuração para funcionar em Docker
         configure: (proxy, _options) => {
-          proxy.on('error', (err, _req, res) => {
+          proxy.on('error', (_err, _req, res) => {
             // Não logar erros de conexão - são esperados se a API não estiver rodando
             if (res && !res.headersSent) {
               res.writeHead(502, {
@@ -40,11 +40,11 @@ export default defineConfig({
           
           // Log de requisições para debug (apenas em desenvolvimento)
           if (process.env.NODE_ENV === 'development') {
-            proxy.on('proxyReq', (proxyReq, req, res) => {
+            proxy.on('proxyReq', (proxyReq, req, _res) => {
               console.log(`[Proxy] ${req.method} ${req.url} -> ${proxyReq.path}`);
             });
             
-            proxy.on('proxyRes', (proxyRes, req, res) => {
+            proxy.on('proxyRes', (proxyRes, req, _res) => {
               console.log(`[Proxy] ${req.method} ${req.url} <- ${proxyRes.statusCode}`);
             });
           }
