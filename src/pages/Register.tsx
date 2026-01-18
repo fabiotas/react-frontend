@@ -44,9 +44,13 @@ export default function Register() {
         err.isConnectionError;
       
       if (isNetworkError) {
-        setError('Não foi possível conectar ao servidor. Verifique se o backend está rodando e tente novamente.');
-      } else if (err instanceof Error) {
         setError(err.message);
+      } else if (err instanceof Error) {
+        // A mensagem já foi tratada no authService com mensagens específicas
+        setError(err.message);
+      } else if (err.response?.data?.error || err.response?.data?.message) {
+        // Fallback: tentar extrair mensagem do erro do axios
+        setError(err.response.data.error || err.response.data.message);
       } else {
         setError('Erro ao criar conta. Tente novamente.');
       }

@@ -9,7 +9,7 @@ export const authService = {
       return response.data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        throw new Error('Não foi possível conectar ao servidor. Verifique se o backend está rodando.');
+        throw new Error('Erro ao fazer login: ' + error.message);
       }
       // Re-throw para que o componente possa tratar
       throw error;
@@ -22,8 +22,40 @@ export const authService = {
       return response.data;
     } catch (error: any) {
       if (isNetworkError(error)) {
-        throw new Error('Não foi possível conectar ao servidor. Verifique se o backend está rodando.');
+        throw new Error('Erro ao criar o login: ' + error.message);
       }
+      
+      // Tratar erros HTTP específicos
+      if (error.response?.status === 400) {
+        const errorMessage = error.response?.data?.error || error.response?.data?.message;
+        
+        // Mensagens específicas baseadas na resposta do backend
+        if (errorMessage?.toLowerCase().includes('email') || 
+            errorMessage?.toLowerCase().includes('já existe') ||
+            errorMessage?.toLowerCase().includes('already exists') ||
+            errorMessage?.toLowerCase().includes('duplicate')) {
+          throw new Error('Este email já está cadastrado. Use outro email ou faça login.');
+        }
+        
+        // Mensagens de validação
+        if (errorMessage?.toLowerCase().includes('senha') || 
+            errorMessage?.toLowerCase().includes('password')) {
+          throw new Error(errorMessage || 'A senha não atende aos requisitos.');
+        }
+        
+        if (errorMessage?.toLowerCase().includes('nome') || 
+            errorMessage?.toLowerCase().includes('name')) {
+          throw new Error(errorMessage || 'O nome fornecido é inválido.');
+        }
+        
+        // Usar a mensagem do backend se disponível, caso contrário usar genérica
+        throw new Error(errorMessage || 'Dados inválidos. Verifique os campos e tente novamente.');
+      }
+      
+      if (error.response?.status === 409) {
+        throw new Error('Este email já está cadastrado. Use outro email ou faça login.');
+      }
+      
       // Re-throw para que o componente possa tratar
       throw error;
     }
