@@ -75,4 +75,5 @@ jobs:
             VITE_API_URL=${{ steps.set-api-url.outputs.api_url }}
 
       - name: Image digest
-        run: echo "Image pushed with digest: ${{ steps.meta.outputs.digest }}"
+        run: |
+          echo "Image pushed with digest: ${{ steps.meta.outputs.digest }}"
