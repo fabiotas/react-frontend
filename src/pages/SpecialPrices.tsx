@@ -5,7 +5,6 @@ import { useToast } from '../components/Toast';
 import {
   Tag,
   Loader2,
-  Plus,
   Trash2,
   Calendar,
   DollarSign,

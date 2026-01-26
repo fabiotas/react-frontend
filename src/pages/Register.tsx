@@ -63,7 +63,7 @@ export default function Register() {
     setError('');
 
     try {
-      const response = await register({ name, email, password });
+      await register({ name, email, password });
       
       // Mostrar tela de sucesso com informação sobre o email
       // A mensagem do backend já informa sobre o email: "Usuario registrado com sucesso. Um email de boas-vindas foi enviado."

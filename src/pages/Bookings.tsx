@@ -716,8 +716,8 @@ export default function Bookings() {
                     isSubmitting || 
                     !selectedArea || 
                     nights <= 0 ||
-                    (packagePeriod && !packagePeriod.isExactMatch) ||
-                    (packagePeriod && packagePeriod.isExactMatch && hasExistingBooking)
+                    !!(packagePeriod && !packagePeriod.isExactMatch) ||
+                    !!(packagePeriod && packagePeriod.isExactMatch && hasExistingBooking)
                   }
                   className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 text-white font-semibold hover:from-primary-700 hover:to-primary-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-primary-200"
                 >
