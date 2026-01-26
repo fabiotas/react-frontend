@@ -29,9 +29,17 @@ export const authService = {
       if (error.response?.status === 400) {
         const errorMessage = error.response?.data?.error || error.response?.data?.message;
         
+        // Tratamento específico para erro de validação de email do SendGrid
+        if (errorMessage === 'Email invalido' || 
+            errorMessage?.toLowerCase() === 'email inválido' ||
+            errorMessage?.toLowerCase().includes('email invalido')) {
+          throw new Error('Email inválido. Por favor, verifique o endereço de email.');
+        }
+        
         // Mensagens específicas baseadas na resposta do backend
         if (errorMessage?.toLowerCase().includes('email') || 
             errorMessage?.toLowerCase().includes('já existe') ||
+            errorMessage?.toLowerCase().includes('ja esta cadastrado') ||
             errorMessage?.toLowerCase().includes('already exists') ||
             errorMessage?.toLowerCase().includes('duplicate')) {
           throw new Error('Este email já está cadastrado. Use outro email ou faça login.');

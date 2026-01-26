@@ -235,7 +235,7 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
             <div className="flex items-center justify-between text-xs text-neutral-500">
               <span>Informações</span>
               <span>Imagens</span>
-              <span>Perguntas Frequentes</span>
+              <span>FAQs</span>
             </div>
           </div>
 

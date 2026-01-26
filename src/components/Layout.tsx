@@ -11,6 +11,7 @@ import {
   Home,
   Calendar,
   Shield,
+  Tag,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -27,6 +28,7 @@ export default function Layout() {
   const navItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { to: '/areas', icon: Home, label: 'Minhas Áreas' },
+    { to: '/special-prices', icon: Tag, label: 'Preços Especiais' },
     { to: '/bookings', icon: Calendar, label: 'Reservas' },
     ...(user?.role === 'admin' ? [{ to: '/users', icon: Users, label: 'Usuários' }] : []),
     { to: '/profile', icon: User, label: 'Perfil' },

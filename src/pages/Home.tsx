@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { areaService } from '../services/areaService';
-import { Area } from '../types';
+import { bookingService } from '../services/bookingService';
+import { Area, Booking } from '../types';
 import {
   MapPin,
   Users,
@@ -18,18 +19,32 @@ import {
   Waves,
   ChevronRight,
   Leaf,
+  Calendar,
 } from 'lucide-react';
 
 export default function Home() {
   const [areas, setAreas] = useState<Area[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [checkIn, setCheckIn] = useState('');
+  const [checkOut, setCheckOut] = useState('');
   const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     loadAreas();
   }, []);
+
+  useEffect(() => {
+    // Carregar reservas quando houver datas selecionadas e áreas carregadas
+    if (checkIn && checkOut && areas.length > 0 && !isLoading) {
+      loadBookings();
+    } else if (!checkIn || !checkOut) {
+      setBookings([]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkIn, checkOut, areas.length, isLoading]);
 
   const loadAreas = async () => {
     try {
@@ -42,18 +57,228 @@ export default function Home() {
     }
   };
 
-  const filteredAreas = areas.filter(
-    (area) =>
+  const loadBookings = useCallback(async () => {
+    if (areas.length === 0) return;
+    
+    try {
+      // Buscar reservas de todas as áreas ativas
+      const activeAreas = areas.filter(a => a.active);
+      const allBookings: Booking[] = [];
+      
+      // Buscar reservas em paralelo (limitado a 10 áreas por vez para não sobrecarregar)
+      const chunks = [];
+      for (let i = 0; i < activeAreas.length; i += 10) {
+        chunks.push(activeAreas.slice(i, i + 10));
+      }
+      
+      for (const chunk of chunks) {
+        const bookingsPromises = chunk.map(area =>
+          bookingService.getBookingsByArea(area._id).catch(() => ({ data: [] }))
+        );
+        const results = await Promise.all(bookingsPromises);
+        results.forEach(result => {
+          allBookings.push(...result.data);
+        });
+      }
+      
+      setBookings(allBookings);
+    } catch (error) {
+      console.error('Erro ao carregar reservas:', error);
+    }
+  }, [areas]);
+
+  // Verificar se área está disponível para o período
+  const isAreaAvailable = (area: Area, startDate: string, endDate: string): boolean => {
+    if (!startDate || !endDate) return true; // Se não tem data, mostra todas
+    if (!area.active) return false;
+
+    const bookingStart = new Date(startDate);
+    const bookingEnd = new Date(endDate);
+
+    // Verificar períodos especiais do tipo pacote
+    const packagePeriods = area.specialPrices?.filter(
+      sp => sp.active && sp.type === 'date_range' && sp.isPackage
+    ) || [];
+
+    for (const packagePeriod of packagePeriods) {
+      if (!packagePeriod.startDate || !packagePeriod.endDate) continue;
+      
+      const periodStart = new Date(packagePeriod.startDate);
+      const periodEnd = new Date(packagePeriod.endDate);
+      
+      // Se o período escolhido está dentro ou sobrepõe um período de pacote
+      if (bookingStart <= periodEnd && bookingEnd >= periodStart) {
+        // Para pacote, deve ser exatamente o período completo
+        if (startDate === packagePeriod.startDate && endDate === packagePeriod.endDate) {
+          // Verificar se já existe reserva neste período
+          const hasBooking = bookings.some(booking => {
+            const bookingAreaId = typeof booking.area === 'string' ? booking.area : booking.area._id;
+            if (bookingAreaId !== area._id) return false;
+            if (booking.status === 'cancelled') return false;
+            
+            const existingStart = new Date(booking.checkIn);
+            const existingEnd = new Date(booking.checkOut);
+            
+            return existingStart.getTime() === periodStart.getTime() && 
+                   existingEnd.getTime() === periodEnd.getTime();
+          });
+          
+          return !hasBooking; // Disponível se não tiver reserva
+        } else {
+          // Não é o período completo, não está disponível
+          return false;
+        }
+      }
+    }
+
+    // Verificar reservas existentes
+    const hasConflict = bookings.some(booking => {
+      const bookingAreaId = typeof booking.area === 'string' ? booking.area : booking.area._id;
+      if (bookingAreaId !== area._id) return false;
+      if (booking.status === 'cancelled') return false;
+      
+      const existingStart = new Date(booking.checkIn);
+      const existingEnd = new Date(booking.checkOut);
+      
+      // Verificar sobreposição
+      return bookingStart < existingEnd && bookingEnd > existingStart;
+    });
+
+    return !hasConflict;
+  };
+
+  useEffect(() => {
+    // Carregar reservas quando houver datas selecionadas e áreas carregadas
+    if (checkIn && checkOut && areas.length > 0 && !isLoading) {
+      loadBookings();
+    } else if (!checkIn || !checkOut) {
+      setBookings([]);
+    }
+  }, [checkIn, checkOut, areas.length, isLoading, loadBookings]);
+
+  const filteredAreas = areas.filter((area) => {
+    // Filtro de busca
+    const matchesSearch = 
       area.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       area.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      area.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+      area.description.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    if (!matchesSearch) return false;
+    
+    // Filtro de disponibilidade
+    if (checkIn && checkOut) {
+      return isAreaAvailable(area, checkIn, checkOut);
+    }
+    
+    return true;
+  });
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
     }).format(value);
+  };
+
+  // Função para obter o preço de um dia específico considerando preços especiais
+  const getPriceForDate = (date: Date, area: Area): { price: number; reason?: string } => {
+    const basePrice = area.pricePerDay;
+    
+    // Verificar se a área tem specialPrices carregados
+    if (!area.specialPrices || area.specialPrices.length === 0) {
+      return { price: basePrice };
+    }
+    
+    const specialPrices = area.specialPrices.filter(sp => sp.active);
+    
+    // Se não houver preços especiais ativos, retornar preço base
+    if (specialPrices.length === 0) {
+      return { price: basePrice };
+    }
+    
+    const dayOfWeek = date.getDay(); // 0 = Dom, 6 = Sáb
+    // Usar formato YYYY-MM-DD para comparação (evitar problemas de fuso horário)
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const fullDate = `${year}-${month}-${day}`;
+    
+    // Prioridade: 1. Período especial (não-pacote), 2. Dia da semana
+    
+    // Verificar período especial (date_range) - apenas se não for pacote
+    const dateRangePrice = specialPrices.find(sp => {
+      if (sp.type !== 'date_range' || !sp.startDate || !sp.endDate) return false;
+      if (sp.isPackage) return false; // Pacotes são tratados separadamente
+      return fullDate >= sp.startDate && fullDate <= sp.endDate;
+    });
+    if (dateRangePrice) {
+      return { price: dateRangePrice.price, reason: dateRangePrice.name };
+    }
+    
+    // Verificar dia da semana
+    const dayOfWeekPrice = specialPrices.find(
+      sp => sp.type === 'day_of_week' && sp.daysOfWeek?.includes(dayOfWeek)
+    );
+    if (dayOfWeekPrice) {
+      return { price: dayOfWeekPrice.price, reason: dayOfWeekPrice.name };
+    }
+    
+    return { price: basePrice };
+  };
+
+  // Calcular preço total para o período
+  const calculatePriceForPeriod = (area: Area, startDate: string, endDate: string): { total: number; perNight: number; hasSpecialPrice: boolean; isPackage: boolean; packageName?: string } => {
+    if (!startDate || !endDate) {
+      return { total: 0, perNight: 0, hasSpecialPrice: false, isPackage: false };
+    }
+
+    // Criar datas no fuso horário local para evitar problemas de UTC
+    const start = new Date(startDate + 'T00:00:00');
+    const end = new Date(endDate + 'T00:00:00');
+    const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (nights <= 0) {
+      return { total: 0, perNight: 0, hasSpecialPrice: false, isPackage: false };
+    }
+
+    // Verificar se é período de pacote
+    const packagePeriods = area.specialPrices?.filter(
+      sp => sp.active && sp.type === 'date_range' && sp.isPackage
+    ) || [];
+
+    for (const packagePeriod of packagePeriods) {
+      if (!packagePeriod.startDate || !packagePeriod.endDate) continue;
+      
+      if (startDate === packagePeriod.startDate && endDate === packagePeriod.endDate) {
+        return {
+          total: packagePeriod.price,
+          perNight: packagePeriod.price / nights,
+          hasSpecialPrice: true,
+          isPackage: true,
+          packageName: packagePeriod.name,
+        };
+      }
+    }
+
+    // Calcular por diária
+    let total = 0;
+    let hasSpecialPrice = false;
+    const currentDate = new Date(start);
+    
+    while (currentDate < end) {
+      const { price, reason } = getPriceForDate(new Date(currentDate), area);
+      total += price;
+      // Se pelo menos um dia tiver preço especial, marcar como hasSpecialPrice
+      if (reason) hasSpecialPrice = true;
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    return {
+      total,
+      perNight: total / nights,
+      hasSpecialPrice,
+      isPackage: false,
+    };
   };
 
   const handleReserve = (areaId: string) => {
@@ -151,17 +376,69 @@ export default function Home() {
               </p>
 
               {/* Search Bar */}
-              <div className="relative max-w-2xl mx-auto animate-slide-up delay-100">
-                <div className="glass rounded-2xl p-2 shadow-xl shadow-primary-100">
-                  <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Buscar por nome, localização ou descrição..."
-                      className="w-full pl-12 pr-4 py-4 rounded-xl bg-white border border-neutral-200 text-neutral-800 placeholder-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 text-lg"
-                    />
+              <div className="relative max-w-4xl mx-auto animate-slide-up delay-100">
+                <div className="glass rounded-2xl p-4 shadow-xl shadow-primary-100">
+                  <div className="space-y-4">
+                    {/* Search Input */}
+                    <div className="relative">
+                      <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="Buscar por nome, localização ou descrição..."
+                        className="w-full pl-12 pr-4 py-3 rounded-xl bg-white border border-neutral-200 text-neutral-800 placeholder-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
+                      />
+                    </div>
+                    
+                    {/* Date Filters */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                        <label className="block text-xs font-medium text-neutral-600 mb-1.5 ml-1">
+                          Check-in
+                        </label>
+                        <input
+                          type="date"
+                          value={checkIn}
+                          onChange={(e) => {
+                            setCheckIn(e.target.value);
+                            if (checkOut && e.target.value >= checkOut) {
+                              setCheckOut('');
+                            }
+                          }}
+                          min={new Date().toISOString().split('T')[0]}
+                          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-neutral-200 text-neutral-800 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
+                        />
+                      </div>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
+                        <label className="block text-xs font-medium text-neutral-600 mb-1.5 ml-1">
+                          Check-out
+                        </label>
+                        <input
+                          type="date"
+                          value={checkOut}
+                          onChange={(e) => setCheckOut(e.target.value)}
+                          min={checkIn || new Date().toISOString().split('T')[0]}
+                          className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-white border border-neutral-200 text-neutral-800 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Clear Filters Button */}
+                    {(checkIn || checkOut || searchTerm) && (
+                      <button
+                        onClick={() => {
+                          setCheckIn('');
+                          setCheckOut('');
+                          setSearchTerm('');
+                        }}
+                        className="text-sm text-primary-600 hover:text-primary-700 font-medium"
+                      >
+                        Limpar filtros
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -226,15 +503,35 @@ export default function Home() {
                   </div>
                 </Link>
                   
-                  {/* Price Badge */}
-                  <div className="absolute top-3 right-3">
-                    <div className="px-3 py-1.5 rounded-lg bg-white/90 backdrop-blur-sm border border-primary-100 shadow-sm">
-                      <span className="text-primary-700 font-bold">
-                        {formatCurrency(area.pricePerDay)}
-                      </span>
-                      <span className="text-neutral-500 text-sm">/dia</span>
-                    </div>
-                  </div>
+                  {/* Price Badge - Só mostra se tiver datas selecionadas */}
+                  {checkIn && checkOut && (() => {
+                    const priceInfo = calculatePriceForPeriod(area, checkIn, checkOut);
+                    
+                    return (
+                      <div className="absolute top-3 right-3">
+                        <div className={`px-3 py-1.5 rounded-lg bg-white/90 backdrop-blur-sm border shadow-sm ${
+                          priceInfo.hasSpecialPrice ? 'border-primary-300' : 'border-primary-100'
+                        }`}>
+                          <div className="flex flex-col items-end">
+                            <span className="text-primary-700 font-bold">
+                              {formatCurrency(priceInfo.perNight)}
+                            </span>
+                            <span className="text-neutral-500 text-xs">/noite</span>
+                            {priceInfo.isPackage && (
+                              <span className="text-xs text-primary-600 font-medium mt-0.5">
+                                Pacote
+                              </span>
+                            )}
+                            {priceInfo.hasSpecialPrice && !priceInfo.isPackage && (
+                              <span className="text-xs text-primary-600 font-medium mt-0.5">
+                                Preço especial
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Rating Badge */}
                   <div className="absolute top-3 left-3">

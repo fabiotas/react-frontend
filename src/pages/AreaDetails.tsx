@@ -21,6 +21,7 @@ import {
   Leaf,
   LogIn,
   HelpCircle,
+  Tag,
 } from 'lucide-react';
 
 export default function AreaDetails() {
@@ -380,9 +381,34 @@ export default function AreaDetails() {
                         <span className="text-neutral-500">/dia</span>
                       </div>
                       <p className="text-sm text-neutral-500">
-                        Preço por noite de hospedagem
+                        Preço base por noite de hospedagem
                       </p>
                     </div>
+
+                    {/* Preços Especiais */}
+                    {area.specialPrices && area.specialPrices.filter(sp => sp.active).length > 0 && (
+                      <div className="pt-4 border-t border-neutral-200">
+                        <div className="flex items-center gap-2 text-sm font-medium text-neutral-700 mb-3">
+                          <Tag className="w-4 h-4 text-primary-600" />
+                          Preços Especiais
+                        </div>
+                        <div className="space-y-2">
+                          {area.specialPrices.filter(sp => sp.active).map((sp, index) => (
+                            <div
+                              key={index}
+                              className="flex items-center justify-between text-sm p-2 rounded-lg bg-primary-50"
+                            >
+                              <span className="text-neutral-600">{sp.name}</span>
+                              <span className={`font-semibold ${
+                                sp.price > area.pricePerDay ? 'text-red-600' : 'text-green-600'
+                              }`}>
+                                {formatCurrency(sp.price)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Details */}
                     <div className="space-y-3 pt-4 border-t border-neutral-200">

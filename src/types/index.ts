@@ -52,6 +52,23 @@ export interface FAQ {
   answer: string;
 }
 
+export type SpecialPriceType = 'date_range' | 'day_of_week' | 'holiday';
+
+export interface SpecialPrice {
+  type: SpecialPriceType;
+  name: string; // Nome descritivo, ex: "Finais de Semana", "Natal", etc.
+  price: number;
+  // Para tipo 'date_range' (período específico)
+  startDate?: string; // YYYY-MM-DD
+  endDate?: string; // YYYY-MM-DD
+  isPackage?: boolean; // Se true, vende apenas o pacote completo. Se false, vende por diária
+  // Para tipo 'day_of_week' (0 = Domingo, 6 = Sábado)
+  daysOfWeek?: number[];
+  // Para tipo 'holiday'
+  holidayDate?: string; // MM-DD (para feriados fixos como Natal)
+  active: boolean;
+}
+
 export interface Area {
   _id: string;
   name: string;
@@ -61,7 +78,8 @@ export interface Area {
   maxGuests: number;
   amenities: string[];
   images: string[];
-  faqs?: FAQ[]; // Adicionar FAQs
+  faqs?: FAQ[];
+  specialPrices?: SpecialPrice[];
   owner: string | User;
   active: boolean;
   createdAt: string;
@@ -76,7 +94,8 @@ export interface CreateAreaData {
   maxGuests: number;
   amenities?: string[];
   images?: string[];
-  faqs?: FAQ[]; // Adicionar FAQs
+  faqs?: FAQ[];
+  specialPrices?: SpecialPrice[];
 }
 
 export interface UpdateAreaData {
@@ -87,7 +106,8 @@ export interface UpdateAreaData {
   maxGuests?: number;
   amenities?: string[];
   images?: string[];
-  faqs?: FAQ[]; // Adicionar FAQs
+  faqs?: FAQ[];
+  specialPrices?: SpecialPrice[];
   active?: boolean;
 }
 

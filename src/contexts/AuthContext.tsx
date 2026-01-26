@@ -1,6 +1,6 @@
 /* @refresh reset */
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, LoginCredentials, RegisterData } from '../types';
+import { User, LoginCredentials, RegisterData, AuthResponse } from '../types';
 import { authService } from '../services/authService';
 import { clearSupabaseTokenCache } from '../services/supabase';
 
@@ -10,7 +10,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   login: (credentials: LoginCredentials) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  register: (data: RegisterData) => Promise<AuthResponse>;
   logout: () => void;
   updateUser: (user: User) => void;
 }
@@ -126,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (data: RegisterData) => {
+  const register = async (data: RegisterData): Promise<AuthResponse> => {
     const response = await authService.register(data);
     
     if (response.success) {
@@ -138,6 +138,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       throw new Error(response.message);
     }
+    
+    return response;
   };
 
   const logout = () => {
