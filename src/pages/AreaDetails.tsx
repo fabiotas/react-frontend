@@ -96,7 +96,6 @@ export default function AreaDetails() {
         'twitter:card', 'twitter:title', 'twitter:description', 'twitter:image'
       ];
       metaTags.forEach(tag => {
-        const isProperty = tag.startsWith('og:');
         removeMetaTag(tag);
       });
     };
