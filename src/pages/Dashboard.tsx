@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { bookingService } from '../services/bookingService';
 import { areaService } from '../services/areaService';
 import { Booking, Area } from '../types';
+import ShareableImage from '../components/ShareableImage';
 import { 
   Users, 
   Shield, 
@@ -19,6 +20,7 @@ import {
   CheckCircle,
   Clock,
   XCircle,
+  Share2,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -34,6 +36,7 @@ export default function Dashboard() {
   const [myAreas, setMyAreas] = useState<Area[]>([]);
   const [myBookings, setMyBookings] = useState<Booking[]>([]);
   const [ownerBookings, setOwnerBookings] = useState<Booking[]>([]);
+  const [shareModal, setShareModal] = useState<{ area: Area; startDate: Date; endDate: Date } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -387,7 +390,7 @@ export default function Dashboard() {
                     
                     <div className="flex flex-wrap gap-2">
                       {availability.map((item) => (
-                        <span
+                        <div
                           key={item.area._id}
                           className={`text-xs px-2 py-1 rounded-lg flex items-center gap-1 ${
                             item.available
@@ -400,8 +403,19 @@ export default function Dashboard() {
                           ) : (
                             <XCircle className="w-3 h-3" />
                           )}
-                          {item.area.name}
-                        </span>
+                          <span>{item.area.name}</span>
+                          {item.available && (
+                            <button
+                              onClick={() => {
+                                setShareModal({ area: item.area, startDate: weekend.start, endDate: weekend.end });
+                              }}
+                              className="ml-2 p-1 rounded hover:bg-primary-100 transition-colors"
+                              title="Compartilhar disponibilidade"
+                            >
+                              <Share2 className="w-3 h-3 text-primary-600" />
+                            </button>
+                          )}
+                        </div>
                       ))}
                     </div>
                   </div>
@@ -576,6 +590,17 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Share Modal */}
+      {shareModal && (
+        <ShareableImage
+          area={shareModal.area}
+          startDate={shareModal.startDate}
+          endDate={shareModal.endDate}
+          isOpen={!!shareModal}
+          onClose={() => setShareModal(null)}
+        />
+      )}
     </div>
   );
 }
