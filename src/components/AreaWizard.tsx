@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, ChevronLeft, ChevronRight, Upload, Image as ImageIcon, Trash2, Plus, Loader2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Upload, Image as ImageIcon, Trash2, Plus, Loader2, Share2 } from 'lucide-react';
 import { Area, FAQ } from '../types';
 import { uploadImage, deleteImage } from '../services/supabase';
 import { useToast } from './Toast';
@@ -15,6 +15,7 @@ interface AreaWizardProps {
     maxGuests: number;
     amenities: string[];
     images: string[];
+    shareImageIndex?: number;
     faqs: FAQ[];
   }) => Promise<void>;
   editingArea?: Area | null;
@@ -39,6 +40,7 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
   const [images, setImages] = useState<string[]>([]);
   const [uploadingImages, setUploadingImages] = useState<string[]>([]);
   const [tempAreaId, setTempAreaId] = useState<string>('');
+  const [shareImageIndex, setShareImageIndex] = useState<number>(0);
 
   // Etapa 3: FAQs
   const [faqs, setFaqs] = useState<FAQ[]>([]);
@@ -57,6 +59,7 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
         });
         setImages(editingArea.images || []);
         setFaqs(editingArea.faqs || []);
+        setShareImageIndex(editingArea.shareImageIndex ?? 0);
         setTempAreaId(editingArea._id); // Usar ID real quando editando
       } else {
         // Reset para novo cadastro
@@ -70,11 +73,21 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
         });
         setImages([]);
         setFaqs([]);
+        setShareImageIndex(0);
         setTempAreaId('');
       }
       setCurrentStep(1);
     }
   }, [isOpen, editingArea]);
+
+  // Validar shareImageIndex quando imagens mudarem
+  useEffect(() => {
+    if (images.length === 0) {
+      setShareImageIndex(0);
+    } else if (shareImageIndex >= images.length) {
+      setShareImageIndex(0);
+    }
+  }, [images, shareImageIndex]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -104,7 +117,14 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
 
         try {
           const imageUrl = await uploadImage(file, areaId);
-          setImages((prev: string[]) => [...prev, imageUrl]);
+          setImages((prev: string[]) => {
+            const newImages = [...prev, imageUrl];
+            // Se for a primeira imagem, definir como imagem de compartilhamento
+            if (prev.length === 0) {
+              setShareImageIndex(0);
+            }
+            return newImages;
+          });
           showToast('Imagem enviada com sucesso', 'success');
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
@@ -124,11 +144,34 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
       if (imageUrl.includes('supabase')) {
         await deleteImage(imageUrl);
       }
-      setImages((prev: string[]) => prev.filter((_: string, i: number) => i !== index));
+      const newImages = images.filter((_: string, i: number) => i !== index);
+      setImages(newImages);
+      
+      // Ajustar shareImageIndex se necessário
+      if (newImages.length === 0) {
+        setShareImageIndex(0);
+      } else if (shareImageIndex >= newImages.length) {
+        setShareImageIndex(0);
+      } else if (index < shareImageIndex) {
+        // Se removemos uma imagem antes da selecionada, ajustar índice
+        setShareImageIndex(shareImageIndex - 1);
+      }
+      
       showToast('Imagem removida', 'success');
     } catch (error) {
       // Se falhar ao deletar, apenas remover da lista
-      setImages((prev: string[]) => prev.filter((_: string, i: number) => i !== index));
+      const newImages = images.filter((_: string, i: number) => i !== index);
+      setImages(newImages);
+      
+      // Ajustar shareImageIndex se necessário
+      if (newImages.length === 0) {
+        setShareImageIndex(0);
+      } else if (shareImageIndex >= newImages.length) {
+        setShareImageIndex(0);
+      } else if (index < shareImageIndex) {
+        setShareImageIndex(shareImageIndex - 1);
+      }
+      
       showToast('Imagem removida da lista', 'success');
     }
   };
@@ -183,6 +226,7 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
         ...basicInfo,
         amenities: amenitiesArray,
         images,
+        shareImageIndex: images.length > 0 ? shareImageIndex : undefined,
         faqs: faqs.filter((faq: FAQ) => faq.question.trim() && faq.answer.trim()),
       });
       
@@ -382,28 +426,82 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
               )}
 
               {images.length > 0 && (
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                  {images.map((imageUrl, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={imageUrl}
-                        alt={`Área ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-xl"
-                        onError={(e) => {
-                          console.error(`Erro ao carregar imagem ${index + 1}:`, imageUrl);
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                        }}
-                        loading="lazy"
-                      />
-                      <button
-                        onClick={() => handleRemoveImage(imageUrl, index)}
-                        className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                <div className="space-y-4">
+                  <div className="bg-primary-50 border border-primary-200 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Share2 className="w-5 h-5 text-primary-600" />
+                      <h3 className="font-semibold text-neutral-800">Imagem de Compartilhamento</h3>
                     </div>
-                  ))}
+                    <p className="text-sm text-neutral-600 mb-3">
+                      Selecione qual imagem será exibida quando a área for compartilhada em redes sociais
+                    </p>
+                    {images[shareImageIndex] && (
+                      <div className="relative">
+                        <img
+                          src={images[shareImageIndex]}
+                          alt="Imagem de compartilhamento selecionada"
+                          className="w-full h-48 object-cover rounded-lg border-2 border-primary-500"
+                          onError={(e) => {
+                            console.error('Erro ao carregar imagem de compartilhamento:', images[shareImageIndex]);
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = 'none';
+                          }}
+                        />
+                        <div className="absolute top-2 right-2 px-3 py-1.5 rounded-lg bg-primary-600 text-white text-sm font-medium flex items-center gap-2">
+                          <Share2 className="w-4 h-4" />
+                          Imagem de Compartilhamento
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div>
+                    <h3 className="font-semibold text-neutral-800 mb-3">Todas as Imagens</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {images.map((imageUrl, index) => (
+                        <div 
+                          key={index} 
+                          className={`relative group cursor-pointer transition-all ${
+                            shareImageIndex === index 
+                              ? 'ring-2 ring-primary-500 ring-offset-2' 
+                              : ''
+                          }`}
+                          onClick={() => setShareImageIndex(index)}
+                        >
+                          <img
+                            src={imageUrl}
+                            alt={`Área ${index + 1}`}
+                            className="w-full h-32 object-cover rounded-xl"
+                            onError={(e) => {
+                              console.error(`Erro ao carregar imagem ${index + 1}:`, imageUrl);
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                            loading="lazy"
+                          />
+                          {shareImageIndex === index && (
+                            <div className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-primary-600 text-white text-xs font-medium flex items-center gap-1">
+                              <Share2 className="w-3 h-3" />
+                              Compartilhamento
+                            </div>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveImage(imageUrl, index);
+                            }}
+                            className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remover imagem"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-xs text-neutral-500 mt-2">
+                      Clique em uma imagem para defini-la como imagem de compartilhamento
+                    </p>
+                  </div>
                 </div>
               )}
 

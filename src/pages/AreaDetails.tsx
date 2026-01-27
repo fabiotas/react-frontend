@@ -39,6 +39,69 @@ export default function AreaDetails() {
     }
   }, [id]);
 
+  // Atualizar meta tags para compartilhamento
+  useEffect(() => {
+    if (!area) return;
+
+    const shareImage = area.shareImage || (area.images && area.images.length > 0 ? area.images[0] : '');
+    const title = `${area.name} - AreaHub`;
+    const description = area.description || '';
+
+    // Remover meta tags antigas
+    const removeMetaTag = (property: string) => {
+      const existing = document.querySelector(`meta[property="${property}"]`) || 
+                       document.querySelector(`meta[name="${property}"]`);
+      if (existing) {
+        existing.remove();
+      }
+    };
+
+    // Adicionar/atualizar meta tags Open Graph
+    const setMetaTag = (property: string, content: string, isProperty = true) => {
+      removeMetaTag(property);
+      const meta = document.createElement('meta');
+      if (isProperty) {
+        meta.setAttribute('property', property);
+      } else {
+        meta.setAttribute('name', property);
+      }
+      meta.setAttribute('content', content);
+      document.head.appendChild(meta);
+    };
+
+    // Open Graph
+    setMetaTag('og:title', title);
+    setMetaTag('og:description', description);
+    if (shareImage) {
+      setMetaTag('og:image', shareImage);
+    }
+    setMetaTag('og:type', 'website');
+    setMetaTag('og:url', window.location.href);
+
+    // Twitter Card
+    setMetaTag('twitter:card', 'summary_large_image', false);
+    setMetaTag('twitter:title', title, false);
+    setMetaTag('twitter:description', description, false);
+    if (shareImage) {
+      setMetaTag('twitter:image', shareImage, false);
+    }
+
+    // Title da página
+    document.title = title;
+
+    // Cleanup: remover meta tags quando componente desmontar ou área mudar
+    return () => {
+      const metaTags = [
+        'og:title', 'og:description', 'og:image', 'og:type', 'og:url',
+        'twitter:card', 'twitter:title', 'twitter:description', 'twitter:image'
+      ];
+      metaTags.forEach(tag => {
+        const isProperty = tag.startsWith('og:');
+        removeMetaTag(tag);
+      });
+    };
+  }, [area]);
+
   const loadArea = async () => {
     try {
       setIsLoading(true);

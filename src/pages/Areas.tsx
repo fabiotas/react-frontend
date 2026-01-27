@@ -189,6 +189,7 @@ export default function Areas() {
     maxGuests: number;
     amenities: string[];
     images: string[];
+    shareImageIndex?: number;
     faqs: FAQ[];
   }) => {
     try {
@@ -280,9 +281,28 @@ export default function Areas() {
                 key={area._id}
                 className="glass rounded-2xl overflow-hidden hover:border-primary-300 hover:shadow-xl hover:shadow-primary-100 transition-all duration-300"
               >
-                {/* Image placeholder */}
-                <div className="h-48 bg-gradient-to-br from-primary-100 to-primary-200 flex items-center justify-center">
-                  <Home className="w-16 h-16 text-primary-300" />
+                {/* Image */}
+                <div className="relative h-48 bg-gradient-to-br from-primary-100 to-primary-200 overflow-hidden">
+                  {(() => {
+                    const displayImage = area.shareImage || 
+                      (area.images && area.images.length > 0 ? area.images[0] : null);
+                    return displayImage ? (
+                      <img
+                        src={displayImage}
+                        alt={area.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Home className="w-16 h-16 text-primary-300" />
+                      </div>
+                    );
+                  })()}
                 </div>
 
                 <div className="p-5 space-y-4">

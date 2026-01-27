@@ -78,6 +78,8 @@ export interface Area {
   maxGuests: number;
   amenities: string[];
   images: string[];
+  shareImageIndex?: number;
+  shareImage?: string;
   faqs?: FAQ[];
   specialPrices?: SpecialPrice[];
   owner: string | User;
@@ -94,6 +96,7 @@ export interface CreateAreaData {
   maxGuests: number;
   amenities?: string[];
   images?: string[];
+  shareImageIndex?: number;
   faqs?: FAQ[];
   specialPrices?: SpecialPrice[];
 }
@@ -106,6 +109,7 @@ export interface UpdateAreaData {
   maxGuests?: number;
   amenities?: string[];
   images?: string[];
+  shareImageIndex?: number;
   faqs?: FAQ[];
   specialPrices?: SpecialPrice[];
   active?: boolean;

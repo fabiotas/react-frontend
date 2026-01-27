@@ -484,20 +484,24 @@ export default function Home() {
               >
                 {/* Image */}
                 <Link to={`/areas/${area._id}`} className="block relative h-48 bg-gradient-to-br from-primary-100 to-primary-200 overflow-hidden">
-                  {area.images && area.images.length > 0 && area.images[0] ? (
-                    <img
-                      src={area.images[0]}
-                      alt={area.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
-                      loading="lazy"
-                    />
-                  ) : null}
-                  <div className={`absolute inset-0 flex items-center justify-center ${area.images && area.images.length > 0 && area.images[0] ? 'bg-black/20' : ''}`}>
-                    {(!area.images || area.images.length === 0 || !area.images[0]) && (
+                  {(() => {
+                    const displayImage = area.shareImage || 
+                      (area.images && area.images.length > 0 ? area.images[0] : null);
+                    return displayImage ? (
+                      <img
+                        src={displayImage}
+                        alt={area.name}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                        loading="lazy"
+                      />
+                    ) : null;
+                  })()}
+                  <div className={`absolute inset-0 flex items-center justify-center ${area.shareImage || (area.images && area.images.length > 0 && area.images[0]) ? 'bg-black/20' : ''}`}>
+                    {!area.shareImage && (!area.images || area.images.length === 0 || !area.images[0]) && (
                       <HomeIcon className="w-16 h-16 text-primary-300 group-hover:scale-110 transition-transform duration-300" />
                     )}
                   </div>
