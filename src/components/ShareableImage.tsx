@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { Area } from '../types';
-import { Download, X, Loader2, Leaf } from 'lucide-react';
+import { Download, X, Loader2 } from 'lucide-react';
 
 interface ShareableImageProps {
   area: Area;
@@ -126,7 +126,7 @@ export default function ShareableImage({ area, startDate, endDate, isOpen, onClo
       ctx.shadowOffsetY = 2;
       
       const dateText = formatDateRange();
-      const lines = wrapText(ctx, dateText, width - 120, 48);
+      const lines = wrapText(ctx, dateText, width - 120);
       lines.forEach((line, index) => {
         ctx.fillText(line, width / 2, dateY + (index * 60));
       });
@@ -137,7 +137,7 @@ export default function ShareableImage({ area, startDate, endDate, isOpen, onClo
       ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
       ctx.textAlign = 'center';
       
-      const nameLines = wrapText(ctx, area.name, width - 120, 40);
+      const nameLines = wrapText(ctx, area.name, width - 120);
       nameLines.forEach((line, index) => {
         ctx.fillText(line, width / 2, areaNameY + (index * 50));
       });
@@ -148,9 +148,9 @@ export default function ShareableImage({ area, startDate, endDate, isOpen, onClo
       ctx.shadowOffsetX = 0;
       ctx.shadowOffsetY = 0;
 
-      // Rodapé "Reserve no AreaHub" com logo
-      const footerY = height - 100;
-      ctx.font = '600 32px system-ui, -apple-system, sans-serif';
+      // Rodapé "Reserve no AreaHub" com logo - ajustado para não cortar
+      const footerY = height - 140; // Mais espaço do fundo
+      ctx.font = '600 28px system-ui, -apple-system, sans-serif';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
       ctx.textAlign = 'center';
       
@@ -158,9 +158,9 @@ export default function ShareableImage({ area, startDate, endDate, isOpen, onClo
       ctx.fillText('Reserve no', width / 2, footerY);
       
       // Logo AreaHub - desenhar igual à página inicial (div com gradiente + ícone Leaf)
-      const logoSize = 60;
+      const logoSize = 50; // Um pouco menor para caber melhor
       const logoX = width / 2;
-      const logoY = footerY + 50;
+      const logoY = footerY + 40; // Espaçamento ajustado
       
       // Desenhar fundo da logo (rounded-xl com gradiente igual à página inicial)
       const logoGradient = ctx.createLinearGradient(logoX - logoSize/2, logoY - logoSize/2, logoX + logoSize/2, logoY + logoSize/2);
@@ -207,9 +207,9 @@ export default function ShareableImage({ area, startDate, endDate, isOpen, onClo
       URL.revokeObjectURL(svgUrl);
       
       // Texto "AreaHub" abaixo da logo
-      ctx.font = 'bold 36px system-ui, -apple-system, sans-serif';
+      ctx.font = 'bold 32px system-ui, -apple-system, sans-serif';
       ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
-      ctx.fillText('AreaHub', width / 2, footerY + 120);
+      ctx.fillText('AreaHub', width / 2, logoY + logoSize/2 + 35); // Posicionado relativo à logo
 
       // Converter para URL
       const url = canvas.toDataURL('image/png');
@@ -222,7 +222,7 @@ export default function ShareableImage({ area, startDate, endDate, isOpen, onClo
     }
   };
 
-  const wrapText = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number, fontSize: number): string[] => {
+  const wrapText = (ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] => {
     const words = text.split(' ');
     const lines: string[] = [];
     let currentLine = words[0];
