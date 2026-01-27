@@ -16,6 +16,7 @@ interface AreaWizardProps {
     amenities: string[];
     images: string[];
     shareImageIndex?: number;
+    shareImage?: string;
     faqs: FAQ[];
   }) => Promise<void>;
   editingArea?: Area | null;
@@ -41,6 +42,9 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
   const [uploadingImages, setUploadingImages] = useState<string[]>([]);
   const [tempAreaId, setTempAreaId] = useState<string>('');
   const [shareImageIndex, setShareImageIndex] = useState<number>(0);
+  const [shareImage, setShareImage] = useState<string>(''); // Imagem específica de compartilhamento
+  const [uploadingShareImage, setUploadingShareImage] = useState<boolean>(false);
+  const [useCustomShareImage, setUseCustomShareImage] = useState<boolean>(false);
 
   // Etapa 3: FAQs
   const [faqs, setFaqs] = useState<FAQ[]>([]);
@@ -57,9 +61,13 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
           maxGuests: editingArea.maxGuests || 1,
           amenities: editingArea.amenities?.join(', ') || '',
         });
-        setImages(editingArea.images || []);
+        const areaImages = editingArea.images || [];
+        setImages(areaImages);
         setFaqs(editingArea.faqs || []);
         setShareImageIndex(editingArea.shareImageIndex ?? 0);
+        setShareImage(editingArea.shareImage || '');
+        // Se tiver shareImage ou não tiver imagens, usar imagem específica
+        setUseCustomShareImage(!!editingArea.shareImage || areaImages.length === 0);
         setTempAreaId(editingArea._id); // Usar ID real quando editando
       } else {
         // Reset para novo cadastro
@@ -74,6 +82,8 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
         setImages([]);
         setFaqs([]);
         setShareImageIndex(0);
+        setShareImage('');
+        setUseCustomShareImage(false);
         setTempAreaId('');
       }
       setCurrentStep(1);
@@ -176,6 +186,56 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
     }
   };
 
+  const handleShareImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Apenas arquivos de imagem são permitidos', 'error');
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      showToast('Arquivo excede 10MB', 'error');
+      return;
+    }
+
+    let areaId = tempAreaId;
+    if (!areaId) {
+      areaId = `temp-${Date.now()}`;
+      setTempAreaId(areaId);
+    }
+
+    setUploadingShareImage(true);
+    try {
+      const imageUrl = await uploadImage(file, areaId);
+      setShareImage(imageUrl);
+      setUseCustomShareImage(true);
+      showToast('Imagem de compartilhamento enviada com sucesso', 'success');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      showToast(`Erro ao enviar imagem: ${errorMessage}`, 'error');
+    } finally {
+      setUploadingShareImage(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveShareImage = async () => {
+    try {
+      if (shareImage.includes('supabase')) {
+        await deleteImage(shareImage);
+      }
+      setShareImage('');
+      setUseCustomShareImage(false);
+      showToast('Imagem de compartilhamento removida', 'success');
+    } catch (error) {
+      setShareImage('');
+      setUseCustomShareImage(false);
+      showToast('Imagem de compartilhamento removida', 'success');
+    }
+  };
+
   const handleAddFAQ = () => {
     setFaqs([...faqs, { question: '', answer: '' }]);
   };
@@ -222,11 +282,19 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
         .map((a: string) => a.trim())
         .filter((a: string) => a.length > 0);
 
+      // Preparar dados de compartilhamento
+      const shareData: { shareImageIndex?: number; shareImage?: string } = {};
+      if (useCustomShareImage && shareImage) {
+        shareData.shareImage = shareImage;
+      } else if (!useCustomShareImage && images.length > 0) {
+        shareData.shareImageIndex = shareImageIndex;
+      }
+
       await onComplete({
         ...basicInfo,
         amenities: amenitiesArray,
         images,
-        shareImageIndex: images.length > 0 ? shareImageIndex : undefined,
+        ...shareData,
         faqs: faqs.filter((faq: FAQ) => faq.question.trim() && faq.answer.trim()),
       });
       
@@ -425,24 +493,49 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
                 </div>
               )}
 
-              {images.length > 0 && (
-                <div className="space-y-4">
-                  <div className="bg-primary-50 border border-primary-200 rounded-xl p-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Share2 className="w-5 h-5 text-primary-600" />
-                      <h3 className="font-semibold text-neutral-800">Imagem de Compartilhamento</h3>
+              {/* Seção de Imagem de Compartilhamento */}
+              <div className="bg-primary-50 border border-primary-200 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Share2 className="w-5 h-5 text-primary-600" />
+                    <h3 className="font-semibold text-neutral-800">Imagem de Compartilhamento</h3>
+                  </div>
+                  {images.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <label className="flex items-center gap-2 text-sm text-neutral-600 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={useCustomShareImage}
+                          onChange={(e) => {
+                            setUseCustomShareImage(e.target.checked);
+                            if (!e.target.checked) {
+                              setShareImage('');
+                            }
+                          }}
+                          className="rounded"
+                        />
+                        <span>Usar imagem específica</span>
+                      </label>
                     </div>
-                    <p className="text-sm text-neutral-600 mb-3">
-                      Selecione qual imagem será exibida quando a área for compartilhada em redes sociais
-                    </p>
-                    {images[shareImageIndex] && (
+                  )}
+                </div>
+                <p className="text-sm text-neutral-600 mb-3">
+                  {useCustomShareImage 
+                    ? 'Faça upload de uma imagem específica para compartilhamento em redes sociais'
+                    : images.length > 0
+                    ? 'Selecione qual imagem será exibida quando a área for compartilhada em redes sociais'
+                    : 'Faça upload de uma imagem específica para compartilhamento em redes sociais (ou adicione imagens primeiro)'}
+                </p>
+                
+                {useCustomShareImage || images.length === 0 ? (
+                  <div className="space-y-3">
+                    {shareImage ? (
                       <div className="relative">
                         <img
-                          src={images[shareImageIndex]}
-                          alt="Imagem de compartilhamento selecionada"
+                          src={shareImage}
+                          alt="Imagem de compartilhamento"
                           className="w-full h-48 object-cover rounded-lg border-2 border-primary-500"
                           onError={(e) => {
-                            console.error('Erro ao carregar imagem de compartilhamento:', images[shareImageIndex]);
                             const target = e.target as HTMLImageElement;
                             target.style.display = 'none';
                           }}
@@ -451,10 +544,73 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
                           <Share2 className="w-4 h-4" />
                           Imagem de Compartilhamento
                         </div>
+                        <button
+                          onClick={handleRemoveShareImage}
+                          className="absolute top-2 left-2 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
+                          title="Remover imagem"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="border-2 border-dashed border-primary-300 rounded-xl p-6 text-center">
+                        <input
+                          type="file"
+                          id="share-image-upload"
+                          accept="image/*"
+                          onChange={handleShareImageUpload}
+                          className="hidden"
+                          disabled={uploadingShareImage}
+                        />
+                        <label
+                          htmlFor="share-image-upload"
+                          className={`cursor-pointer flex flex-col items-center gap-3 ${uploadingShareImage ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                          {uploadingShareImage ? (
+                            <>
+                              <Loader2 className="w-12 h-12 text-primary-600 animate-spin" />
+                              <span className="text-primary-600 font-medium">Enviando imagem...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Upload className="w-12 h-12 text-primary-400" />
+                              <div>
+                                <span className="text-primary-600 font-medium">Clique para enviar</span>
+                                <span className="text-neutral-500"> uma imagem específica para compartilhamento</span>
+                              </div>
+                              <p className="text-xs text-neutral-400">
+                                PNG, JPG, GIF até 10MB
+                              </p>
+                            </>
+                          )}
+                        </label>
                       </div>
                     )}
                   </div>
-                  
+                ) : (
+                  images[shareImageIndex] && (
+                    <div className="relative">
+                      <img
+                        src={images[shareImageIndex]}
+                        alt="Imagem de compartilhamento selecionada"
+                        className="w-full h-48 object-cover rounded-lg border-2 border-primary-500"
+                        onError={(e) => {
+                          console.error('Erro ao carregar imagem de compartilhamento:', images[shareImageIndex]);
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                      />
+                      <div className="absolute top-2 right-2 px-3 py-1.5 rounded-lg bg-primary-600 text-white text-sm font-medium flex items-center gap-2">
+                        <Share2 className="w-4 h-4" />
+                        Imagem de Compartilhamento
+                      </div>
+                    </div>
+                  )
+                )}
+              </div>
+
+              {images.length > 0 && (
+                <div className="space-y-4">
                   <div>
                     <h3 className="font-semibold text-neutral-800 mb-3">Todas as Imagens</h3>
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -462,11 +618,15 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
                         <div 
                           key={index} 
                           className={`relative group cursor-pointer transition-all ${
-                            shareImageIndex === index 
+                            !useCustomShareImage && shareImageIndex === index 
                               ? 'ring-2 ring-primary-500 ring-offset-2' 
                               : ''
                           }`}
-                          onClick={() => setShareImageIndex(index)}
+                          onClick={() => {
+                            if (!useCustomShareImage) {
+                              setShareImageIndex(index);
+                            }
+                          }}
                         >
                           <img
                             src={imageUrl}
@@ -479,7 +639,7 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
                             }}
                             loading="lazy"
                           />
-                          {shareImageIndex === index && (
+                          {!useCustomShareImage && shareImageIndex === index && (
                             <div className="absolute top-2 left-2 px-2 py-1 rounded-lg bg-primary-600 text-white text-xs font-medium flex items-center gap-1">
                               <Share2 className="w-3 h-3" />
                               Compartilhamento
@@ -498,9 +658,11 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
                         </div>
                       ))}
                     </div>
-                    <p className="text-xs text-neutral-500 mt-2">
-                      Clique em uma imagem para defini-la como imagem de compartilhamento
-                    </p>
+                    {!useCustomShareImage && (
+                      <p className="text-xs text-neutral-500 mt-2">
+                        Clique em uma imagem para defini-la como imagem de compartilhamento
+                      </p>
+                    )}
                   </div>
                 </div>
               )}

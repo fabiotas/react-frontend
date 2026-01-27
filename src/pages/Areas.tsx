@@ -190,6 +190,7 @@ export default function Areas() {
     amenities: string[];
     images: string[];
     shareImageIndex?: number;
+    shareImage?: string;
     faqs: FAQ[];
   }) => {
     try {

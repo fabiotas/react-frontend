@@ -97,6 +97,7 @@ export interface CreateAreaData {
   amenities?: string[];
   images?: string[];
   shareImageIndex?: number;
+  shareImage?: string;
   faqs?: FAQ[];
   specialPrices?: SpecialPrice[];
 }
@@ -110,6 +111,7 @@ export interface UpdateAreaData {
   amenities?: string[];
   images?: string[];
   shareImageIndex?: number;
+  shareImage?: string;
   faqs?: FAQ[];
   specialPrices?: SpecialPrice[];
   active?: boolean;
