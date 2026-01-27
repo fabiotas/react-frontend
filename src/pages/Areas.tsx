@@ -8,7 +8,6 @@ import {
   Edit2,
   Trash2,
   Search,
-  X,
   Loader2,
   DollarSign,
   Users,
@@ -24,20 +23,9 @@ export default function Areas() {
   const [areas, setAreas] = useState<Area[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingArea, setEditingArea] = useState<Area | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { showToast, ToastContainer } = useToast();
   const [isWizardOpen, setIsWizardOpen] = useState(false);
-
-  const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    address: '',
-    pricePerDay: 0,
-    maxGuests: 1,
-    amenities: '',
-  });
 
   useEffect(() => {
     loadAreas();
@@ -66,44 +54,6 @@ export default function Areas() {
     }
   };
 
-  const handleOpenModal = (area?: Area) => {
-    if (area) {
-      setEditingArea(area);
-      setFormData({
-        name: area.name,
-        description: area.description,
-        address: area.address,
-        pricePerDay: area.pricePerDay,
-        maxGuests: area.maxGuests,
-        amenities: area.amenities.join(', '),
-      });
-    } else {
-      setEditingArea(null);
-      setFormData({
-        name: '',
-        description: '',
-        address: '',
-        pricePerDay: 0,
-        maxGuests: 1,
-        amenities: '',
-      });
-    }
-    setIsModalOpen(true);
-  };
-
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingArea(null);
-    setFormData({
-      name: '',
-      description: '',
-      address: '',
-      pricePerDay: 0,
-      maxGuests: 1,
-      amenities: '',
-    });
-  };
-
   const handleOpenWizard = (area?: Area) => {
     setEditingArea(area || null);
     setIsWizardOpen(true);
@@ -112,46 +62,6 @@ export default function Areas() {
   const handleCloseWizard = () => {
     setIsWizardOpen(false);
     setEditingArea(null);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-
-    const amenitiesArray = formData.amenities
-      .split(',')
-      .map((a) => a.trim())
-      .filter((a) => a.length > 0);
-
-    try {
-      if (editingArea) {
-        await areaService.updateArea(editingArea._id, {
-          name: formData.name,
-          description: formData.description,
-          address: formData.address,
-          pricePerDay: formData.pricePerDay,
-          maxGuests: formData.maxGuests,
-          amenities: amenitiesArray,
-        });
-        showToast('Área atualizada com sucesso', 'success');
-      } else {
-        await areaService.createArea({
-          name: formData.name,
-          description: formData.description,
-          address: formData.address,
-          pricePerDay: formData.pricePerDay,
-          maxGuests: formData.maxGuests,
-          amenities: amenitiesArray,
-        });
-        showToast('Área criada com sucesso', 'success');
-      }
-      handleCloseModal();
-      loadAreas();
-    } catch {
-      showToast(editingArea ? 'Erro ao atualizar área' : 'Erro ao criar área', 'error');
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   const handleDelete = async (area: Area) => {
@@ -416,171 +326,6 @@ export default function Areas() {
           </div>
         )}
       </div>
-
-      {/* Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/50 backdrop-blur-sm animate-fade-in">
-          <div className="glass rounded-2xl w-full max-w-lg p-6 animate-slide-up max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="font-display text-xl font-bold text-neutral-800">
-                {editingArea ? 'Editar Área' : 'Nova Área'}
-              </h2>
-              <button
-                onClick={handleCloseModal}
-                className="p-2 rounded-lg text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-neutral-700">
-                  Nome da Área
-                </label>
-                <div className="relative">
-                  <Home className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    required
-                    className="w-full pl-12 pr-4 py-3 rounded-xl bg-white border border-neutral-200 text-neutral-800 placeholder-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
-                    placeholder="Casa de praia, Apartamento, Sítio..."
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-neutral-700">
-                  Descrição
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  required
-                  rows={3}
-                  className="w-full px-4 py-3 rounded-xl bg-white border border-neutral-200 text-neutral-800 placeholder-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 resize-none"
-                  placeholder="Descreva sua área..."
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-neutral-700">
-                  Endereço
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                  <input
-                    type="text"
-                    value={formData.address}
-                    onChange={(e) =>
-                      setFormData({ ...formData, address: e.target.value })
-                    }
-                    required
-                    className="w-full pl-12 pr-4 py-3 rounded-xl bg-white border border-neutral-200 text-neutral-800 placeholder-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
-                    placeholder="Rua, número, cidade..."
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-neutral-700">
-                    Preço por dia (R$)
-                  </label>
-                  <div className="relative">
-                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                    <input
-                      type="number"
-                      value={formData.pricePerDay}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          pricePerDay: parseFloat(e.target.value) || 0,
-                        })
-                      }
-                      required
-                      min="0"
-                      step="0.01"
-                      className="w-full pl-12 pr-4 py-3 rounded-xl bg-white border border-neutral-200 text-neutral-800 placeholder-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
-                      placeholder="150.00"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-neutral-700">
-                    Máx. Hóspedes
-                  </label>
-                  <div className="relative">
-                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-neutral-400" />
-                    <input
-                      type="number"
-                      value={formData.maxGuests}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          maxGuests: parseInt(e.target.value) || 1,
-                        })
-                      }
-                      required
-                      min="1"
-                      className="w-full pl-12 pr-4 py-3 rounded-xl bg-white border border-neutral-200 text-neutral-800 placeholder-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
-                      placeholder="4"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-neutral-700">
-                  Comodidades (separadas por vírgula)
-                </label>
-                <input
-                  type="text"
-                  value={formData.amenities}
-                  onChange={(e) =>
-                    setFormData({ ...formData, amenities: e.target.value })
-                  }
-                  className="w-full px-4 py-3 rounded-xl bg-white border border-neutral-200 text-neutral-800 placeholder-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
-                  placeholder="Wi-Fi, Piscina, Churrasqueira, Estacionamento..."
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="flex-1 py-3 px-4 rounded-xl border border-neutral-300 text-neutral-600 font-semibold hover:bg-neutral-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 text-white font-semibold hover:from-primary-700 hover:to-primary-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-primary-200"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Salvando...
-                    </>
-                  ) : editingArea ? (
-                    'Salvar'
-                  ) : (
-                    'Criar'
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Wizard */}
       <AreaWizard
