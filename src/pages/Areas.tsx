@@ -396,7 +396,7 @@ export default function Areas() {
                       )}
                     </button>
                     <button
-                      onClick={() => handleOpenModal(area)}
+                      onClick={() => handleOpenWizard(area)}
                       className="p-2 rounded-lg text-neutral-500 hover:text-primary-600 hover:bg-primary-50 transition-colors"
                       title="Editar"
                     >
