@@ -1,6 +1,6 @@
 import { useRef, useEffect, useState } from 'react';
 import { Area } from '../types';
-import { Download, X, Loader2 } from 'lucide-react';
+import { Download, X, Loader2, Share2 } from 'lucide-react';
 
 interface ShareableImageProps {
   area: Area;
@@ -15,6 +15,12 @@ export default function ShareableImage({ area, startDate, endDate, isOpen, onClo
   const [isGenerating, setIsGenerating] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [areaImageLoaded, setAreaImageLoaded] = useState<string | null>(null);
+  const [canShare, setCanShare] = useState(false);
+
+  useEffect(() => {
+    // Verificar se a Web Share API está disponível
+    setCanShare('share' in navigator && 'canShare' in navigator);
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -251,6 +257,45 @@ export default function ShareableImage({ area, startDate, endDate, isOpen, onClo
     link.click();
   };
 
+  const shareImage = async () => {
+    if (!imageUrl) return;
+
+    try {
+      // Converter data URL para Blob
+      const response = await fetch(imageUrl);
+      const blob = await response.blob();
+      const dateStr = `${startDate.toLocaleDateString('pt-BR')}-${endDate.toLocaleDateString('pt-BR')}`.replace(/\//g, '-');
+      const fileName = `areahub-${area.name.replace(/\s+/g, '-')}-${dateStr}.png`;
+      const file = new File([blob], fileName, { type: 'image/png' });
+
+      const shareData: ShareData = {
+        title: `${area.name} - Disponível`,
+        text: `${area.name} está disponível de ${formatDateRange()}. Reserve no AreaHub!`,
+        files: [file],
+      };
+
+      // Verificar se pode compartilhar com arquivo
+      if (navigator.canShare && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        // Fallback: compartilhar apenas texto e URL
+        const shareUrl = `${window.location.origin}/areas/${area._id}`;
+        await navigator.share({
+          title: `${area.name} - Disponível`,
+          text: `${area.name} está disponível de ${formatDateRange()}. Reserve no AreaHub!`,
+          url: shareUrl,
+        });
+      }
+    } catch (error: any) {
+      // Se o usuário cancelar, não fazer nada
+      if (error.name !== 'AbortError') {
+        console.error('Erro ao compartilhar:', error);
+        // Fallback para download se compartilhamento falhar
+        downloadImage();
+      }
+    }
+  };
+
   const formatDateRange = () => {
     const start = startDate.toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -329,10 +374,24 @@ export default function ShareableImage({ area, startDate, endDate, isOpen, onClo
           >
             Fechar
           </button>
+          {canShare && (
+            <button
+              onClick={shareImage}
+              disabled={!imageUrl || isGenerating}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 text-white font-semibold hover:from-primary-700 hover:to-primary-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Share2 className="w-5 h-5" />
+              Compartilhar
+            </button>
+          )}
           <button
             onClick={downloadImage}
             disabled={!imageUrl || isGenerating}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-primary-600 to-primary-700 text-white font-semibold hover:from-primary-700 hover:to-primary-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl ${
+              canShare
+                ? 'border border-primary-600 text-primary-700 font-semibold hover:bg-primary-50 transition-all'
+                : 'bg-gradient-to-r from-primary-600 to-primary-700 text-white font-semibold hover:from-primary-700 hover:to-primary-800 transition-all'
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             <Download className="w-5 h-5" />
             Baixar Imagem
