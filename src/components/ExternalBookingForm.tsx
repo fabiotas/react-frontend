@@ -3,7 +3,7 @@ import { bookingService } from '../services/bookingService';
 import { Area, BookingStatus } from '../types';
 import { useToast } from './Toast';
 import { maskPhone, maskCPF, removeNonNumeric, validatePhone, validateCPFFormat, validateBirthDate } from '../utils/masks';
-import { X, Loader2, Calendar, Users, DollarSign, User as UserIcon, Phone, CreditCard, Calendar as CalendarIcon } from 'lucide-react';
+import { X, Loader2, Calendar, User as UserIcon } from 'lucide-react';
 
 interface ExternalBookingFormProps {
   area: Area;
