@@ -226,19 +226,20 @@ export default function Home() {
     return { price: basePrice };
   };
 
-  // Calcular preço total para o período
-  const calculatePriceForPeriod = (area: Area, startDate: string, endDate: string): { total: number; perNight: number; hasSpecialPrice: boolean; isPackage: boolean; packageName?: string } => {
+  // Calcular preço total para o período (incluindo check-in e check-out)
+  const calculatePriceForPeriod = (area: Area, startDate: string, endDate: string): { total: number; perDay: number; hasSpecialPrice: boolean; isPackage: boolean; packageName?: string } => {
     if (!startDate || !endDate) {
-      return { total: 0, perNight: 0, hasSpecialPrice: false, isPackage: false };
+      return { total: 0, perDay: 0, hasSpecialPrice: false, isPackage: false };
     }
 
     // Criar datas no fuso horário local para evitar problemas de UTC
     const start = new Date(startDate + 'T00:00:00');
     const end = new Date(endDate + 'T00:00:00');
-    const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    // Incluir tanto o dia de check-in quanto o dia de check-out
+    const days = Math.floor((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     
-    if (nights <= 0) {
-      return { total: 0, perNight: 0, hasSpecialPrice: false, isPackage: false };
+    if (days <= 0) {
+      return { total: 0, perDay: 0, hasSpecialPrice: false, isPackage: false };
     }
 
     // Verificar se é período de pacote
@@ -252,7 +253,7 @@ export default function Home() {
       if (startDate === packagePeriod.startDate && endDate === packagePeriod.endDate) {
         return {
           total: packagePeriod.price,
-          perNight: packagePeriod.price / nights,
+          perDay: packagePeriod.price / days,
           hasSpecialPrice: true,
           isPackage: true,
           packageName: packagePeriod.name,
@@ -260,12 +261,13 @@ export default function Home() {
       }
     }
 
-    // Calcular por diária
+    // Calcular por diária (incluindo check-in e check-out)
     let total = 0;
     let hasSpecialPrice = false;
     const currentDate = new Date(start);
     
-    while (currentDate < end) {
+    // Incluir o dia de check-out também (<= ao invés de <)
+    while (currentDate <= end) {
       const { price, reason } = getPriceForDate(new Date(currentDate), area);
       total += price;
       // Se pelo menos um dia tiver preço especial, marcar como hasSpecialPrice
@@ -275,7 +277,7 @@ export default function Home() {
 
     return {
       total,
-      perNight: total / nights,
+      perDay: total / days,
       hasSpecialPrice,
       isPackage: false,
     };
@@ -518,9 +520,9 @@ export default function Home() {
                         }`}>
                           <div className="flex flex-col items-end">
                             <span className="text-primary-700 font-bold">
-                              {formatCurrency(priceInfo.perNight)}
+                              {formatCurrency(priceInfo.perDay)}
                             </span>
-                            <span className="text-neutral-500 text-xs">/noite</span>
+                            <span className="text-neutral-500 text-xs">/dia</span>
                             {priceInfo.isPackage && (
                               <span className="text-xs text-primary-600 font-medium mt-0.5">
                                 Pacote

@@ -12,13 +12,52 @@ import {
   Calendar,
   Shield,
   Tag,
+  UserPlus,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { areaService } from '../services/areaService';
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [hasOwnedAreas, setHasOwnedAreas] = useState(false);
+
+  useEffect(() => {
+    checkOwnedAreas();
+  }, [user]);
+
+  const checkOwnedAreas = async () => {
+    if (!user) {
+      setHasOwnedAreas(false);
+      return;
+    }
+
+    // Admin sempre pode acessar
+    if (user.role === 'admin') {
+      setHasOwnedAreas(true);
+      return;
+    }
+
+    try {
+      const response = await areaService.getMyAreas();
+      // getMyAreas já retorna apenas áreas do usuário, então se houver pelo menos uma, ele é dono
+      setHasOwnedAreas(response.data.length > 0);
+    } catch (error: any) {
+      // Em caso de erro de rede ou servidor, não mostrar o item no menu
+      const isNetworkError = 
+        !error.response || 
+        error.code === 'ERR_NETWORK' || 
+        error.code === 'ERR_EMPTY_RESPONSE' ||
+        error.code === 'ECONNABORTED';
+      
+      // Silenciar erros de rede/servidor, apenas não mostrar o item
+      if (!isNetworkError && error.response?.status !== 500) {
+        console.warn('Erro ao verificar áreas do usuário:', error);
+      }
+      setHasOwnedAreas(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -30,6 +69,7 @@ export default function Layout() {
     { to: '/areas', icon: Home, label: 'Minhas Áreas' },
     { to: '/special-prices', icon: Tag, label: 'Preços Especiais' },
     { to: '/bookings', icon: Calendar, label: 'Reservas' },
+    ...(hasOwnedAreas ? [{ to: '/external-booking', icon: UserPlus, label: 'Reserva Externa' }] : []),
     ...(user?.role === 'admin' ? [{ to: '/users', icon: Users, label: 'Usuários' }] : []),
     { to: '/profile', icon: User, label: 'Perfil' },
   ];

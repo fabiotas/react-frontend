@@ -12,6 +12,7 @@ import Areas from './pages/Areas';
 import Bookings from './pages/Bookings';
 import AreaDetails from './pages/AreaDetails';
 import SpecialPrices from './pages/SpecialPrices';
+import ExternalBooking from './pages/ExternalBooking';
 
 function App() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -45,6 +46,7 @@ function App() {
           <Route path="/areas" element={<Areas />} />
           <Route path="/special-prices" element={<SpecialPrices />} />
           <Route path="/bookings" element={<Bookings />} />
+          <Route path="/external-booking" element={<ExternalBooking />} />
           <Route path="/users" element={<Users />} />
           <Route path="/profile" element={<Profile />} />
         </Route>

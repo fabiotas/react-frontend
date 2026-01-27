@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { bookingService } from '../services/bookingService';
 import { areaService } from '../services/areaService';
-import { Booking, Area } from '../types';
+import { Booking, Area, Guest, User } from '../types';
 import { useToast } from '../components/Toast';
 import {
   Calendar,
@@ -16,6 +16,14 @@ import {
   X,
   Home as HomeIcon,
   Tag,
+  User as UserIcon,
+  Phone,
+  CreditCard,
+  ExternalLink,
+  Eye,
+  Mail,
+  Calendar as CalendarIcon,
+  Info,
 } from 'lucide-react';
 
 interface LocationState {
@@ -34,6 +42,8 @@ export default function Bookings() {
   const [activeTab, setActiveTab] = useState<'my' | 'owner'>('my');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const { showToast, ToastContainer } = useToast();
 
   const [formData, setFormData] = useState({
@@ -160,6 +170,34 @@ export default function Bookings() {
     }).format(value);
   };
 
+  const formatPhone = (phone: string) => {
+    // Se já está formatado, retornar como está
+    if (phone.includes('(') || phone.includes('-')) {
+      return phone;
+    }
+    // Se não está formatado, formatar
+    const numbers = phone.replace(/\D/g, '');
+    if (numbers.length === 10) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 6)}-${numbers.slice(6)}`;
+    } else if (numbers.length === 11) {
+      return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7)}`;
+    }
+    return phone;
+  };
+
+  const formatCPF = (cpf: string) => {
+    // Se já está formatado, retornar como está
+    if (cpf.includes('.')) {
+      return cpf;
+    }
+    // Se não está formatado, formatar
+    const numbers = cpf.replace(/\D/g, '');
+    if (numbers.length === 11) {
+      return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9)}`;
+    }
+    return cpf;
+  };
+
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
       pending: 'bg-yellow-100 text-yellow-700',
@@ -190,11 +228,14 @@ export default function Bookings() {
     );
   };
 
-  const calculateNights = (checkIn: string, checkOut: string) => {
-    const start = new Date(checkIn);
-    const end = new Date(checkOut);
+  // Calcula o número de diárias (dias) incluindo check-in e check-out
+  const calculateDays = (checkIn: string, checkOut: string) => {
+    const start = new Date(checkIn + 'T00:00:00');
+    const end = new Date(checkOut + 'T00:00:00');
+    // Incluir tanto o dia de check-in quanto o dia de check-out
     const diffTime = Math.abs(end.getTime() - start.getTime());
-    return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const days = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 para incluir ambos os dias
+    return days;
   };
 
   // Função para obter o preço de um dia específico considerando preços especiais
@@ -243,7 +284,7 @@ export default function Bookings() {
     return { price: basePrice };
   };
 
-  // Calcula detalhamento de preços por dia
+  // Calcula detalhamento de preços por dia (incluindo check-in e check-out)
   const calculatePriceBreakdown = (checkIn: string, checkOut: string, area: Area) => {
     // Criar datas no fuso horário local para evitar problemas de UTC
     const start = new Date(checkIn + 'T00:00:00');
@@ -251,7 +292,8 @@ export default function Bookings() {
     const breakdown: { date: Date; price: number; reason?: string }[] = [];
     
     const currentDate = new Date(start);
-    while (currentDate < end) {
+    // Incluir o dia de check-out também (<= ao invés de <)
+    while (currentDate <= end) {
       const { price, reason } = getPriceForDate(currentDate, area);
       breakdown.push({
         date: new Date(currentDate),
@@ -316,7 +358,7 @@ export default function Bookings() {
   };
 
   const selectedArea = availableAreas.find((a) => a._id === formData.areaId);
-  const nights = formData.checkIn && formData.checkOut ? calculateNights(formData.checkIn, formData.checkOut) : 0;
+  const days = formData.checkIn && formData.checkOut ? calculateDays(formData.checkIn, formData.checkOut) : 0;
   
   // Verificar se é período de pacote
   const packagePeriod = selectedArea && formData.checkIn && formData.checkOut
@@ -394,18 +436,29 @@ export default function Bookings() {
           <div className="space-y-4">
             {currentBookings.map((booking) => {
               const area = booking.area as Area;
+              const isExternalBooking = booking.guestModel === 'Guest';
+              // Se guest é string (ID), não podemos mostrar informações
+              const guest = typeof booking.guest === 'string' ? null : (booking.guest as Guest | User);
+              const isGuest = isExternalBooking && guest && typeof guest === 'object' && 'phone' in guest && !('email' in guest);
+              
               return (
                 <div
                   key={booking._id}
                   className="glass rounded-2xl p-6 hover:border-primary-300 hover:shadow-lg hover:shadow-primary-100 transition-all duration-300"
                 >
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-3">
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-3 flex-wrap">
                         <h3 className="font-display font-bold text-lg text-neutral-800">
                           {area?.name || 'Área removida'}
                         </h3>
                         {getStatusBadge(booking.status)}
+                        {isExternalBooking && (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                            <ExternalLink className="w-3 h-3" />
+                            Reserva Externa
+                          </span>
+                        )}
                       </div>
                       {area && (
                         <p className="text-neutral-500 text-sm flex items-center gap-1">
@@ -413,6 +466,52 @@ export default function Bookings() {
                           {area.address}
                         </p>
                       )}
+                      
+                      {/* Informações do Hóspede */}
+                      <div className="mt-3 p-3 rounded-lg bg-neutral-50 border border-neutral-200">
+                        <div className="flex items-center gap-2 mb-2">
+                          <UserIcon className="w-4 h-4 text-primary-600" />
+                          <span className="text-sm font-medium text-neutral-700">
+                            {isExternalBooking ? 'Hóspede (Pré-Usuário)' : 'Hóspede'}
+                          </span>
+                        </div>
+                        {!guest ? (
+                          <div className="text-sm text-neutral-500 italic">
+                            Informações do hóspede não disponíveis
+                          </div>
+                        ) : isGuest ? (
+                          <div className="space-y-1 text-sm text-neutral-600">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{(guest as Guest).name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Phone className="w-3 h-3 text-neutral-400" />
+                              <span>{formatPhone((guest as Guest).phone)}</span>
+                            </div>
+                            {(guest as Guest).cpf && (
+                              <div className="flex items-center gap-2">
+                                <CreditCard className="w-3 h-3 text-neutral-400" />
+                                <span>{formatCPF((guest as Guest).cpf!)}</span>
+                              </div>
+                            )}
+                            {(guest as Guest).birthDate && (
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-3 h-3 text-neutral-400" />
+                                <span>
+                                  {new Date((guest as Guest).birthDate!).toLocaleDateString('pt-BR')}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="text-sm text-neutral-600">
+                            <span className="font-medium">{(guest as User).name}</span>
+                            <span className="text-neutral-400 mx-2">•</span>
+                            <span>{(guest as User).email}</span>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="flex flex-wrap items-center gap-4 text-sm">
                         <span className="flex items-center gap-1 text-neutral-600">
                           <Calendar className="w-4 h-4 text-primary-600" />
@@ -430,34 +529,60 @@ export default function Bookings() {
                     </div>
 
                     {/* Actions */}
-                    {activeTab === 'owner' && booking.status === 'pending' && (
-                      <div className="flex gap-2">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <button
-                          onClick={() => handleUpdateStatus(booking, 'confirmed')}
-                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary-100 text-primary-700 font-medium hover:bg-primary-200 transition-colors"
+                          onClick={() => {
+                            setSelectedBooking(booking);
+                            setIsDetailModalOpen(true);
+                          }}
+                          className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-neutral-100 text-neutral-700 font-medium hover:bg-neutral-200 transition-colors"
                         >
-                          <CheckCircle className="w-4 h-4" />
-                          Confirmar
+                          <Eye className="w-4 h-4" />
+                          Ver Detalhes
                         </button>
+                        
+                        {activeTab === 'owner' && booking.status === 'pending' && (
+                          <>
+                            <button
+                              onClick={() => handleUpdateStatus(booking, 'confirmed')}
+                              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-primary-100 text-primary-700 font-medium hover:bg-primary-200 transition-colors"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              Confirmar
+                            </button>
+                            <button
+                              onClick={() => handleUpdateStatus(booking, 'cancelled')}
+                              className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-red-100 text-red-700 font-medium hover:bg-red-200 transition-colors"
+                            >
+                              <XCircle className="w-4 h-4" />
+                              Recusar
+                            </button>
+                          </>
+                        )}
+
+                        {activeTab === 'my' && booking.status === 'pending' && (
+                          <button
+                            onClick={() => handleUpdateStatus(booking, 'cancelled')}
+                            className="flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-red-100 text-red-700 font-medium hover:bg-red-200 transition-colors"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            Cancelar
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Botão de Cancelar Reserva - aparece para reservas não canceladas/concluídas */}
+                      {booking.status !== 'cancelled' && booking.status !== 'completed' && (
                         <button
                           onClick={() => handleUpdateStatus(booking, 'cancelled')}
-                          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-100 text-red-700 font-medium hover:bg-red-200 transition-colors"
+                          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-red-100 text-red-700 font-medium hover:bg-red-200 transition-colors"
                         >
                           <XCircle className="w-4 h-4" />
-                          Recusar
+                          Cancelar Reserva
                         </button>
-                      </div>
-                    )}
-
-                    {activeTab === 'my' && booking.status === 'pending' && (
-                      <button
-                        onClick={() => handleUpdateStatus(booking, 'cancelled')}
-                        className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-100 text-red-700 font-medium hover:bg-red-200 transition-colors"
-                      >
-                        <XCircle className="w-4 h-4" />
-                        Cancelar
-                      </button>
-                    )}
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -502,8 +627,8 @@ export default function Bookings() {
                         <span className="text-primary-700 font-semibold">
                           {(() => {
                             // Se houver datas preenchidas, calcular o preço médio considerando preços especiais
-                            if (formData.checkIn && formData.checkOut && nights > 0) {
-                              const avgPrice = estimatedTotal / nights;
+                            if (formData.checkIn && formData.checkOut && days > 0) {
+                              const avgPrice = estimatedTotal / days;
                               return `${formatCurrency(avgPrice)}/dia`;
                             }
                             // Caso contrário, mostrar preço padrão
@@ -646,7 +771,7 @@ export default function Bookings() {
               </div>
 
               {/* Resumo do preço */}
-              {selectedArea && nights > 0 && (
+              {selectedArea && days > 0 && (
                 <div className="p-4 rounded-xl bg-primary-50 border border-primary-200">
                   <h4 className="font-medium text-neutral-800 mb-3">Resumo</h4>
                   <div className="space-y-2 text-sm">
@@ -659,7 +784,7 @@ export default function Bookings() {
                         </div>
                         <div className="flex justify-between text-neutral-600">
                           <span>
-                            {packagePeriod.specialPrice.name} ({nights} noites)
+                            {packagePeriod.specialPrice.name} ({days} diária{days !== 1 ? 's' : ''})
                           </span>
                           <span className="font-medium text-primary-700">
                             {formatCurrency(estimatedTotal)}
@@ -687,13 +812,13 @@ export default function Bookings() {
                     ) : (
                       <div className="flex justify-between text-neutral-600">
                         <span>
-                          {formatCurrency(selectedArea.pricePerDay)} x {nights} noites
+                          {formatCurrency(selectedArea.pricePerDay)} x {days} diária{days !== 1 ? 's' : ''}
                         </span>
                         <span>{formatCurrency(estimatedTotal)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-neutral-800 font-semibold pt-2 border-t border-primary-200">
-                      <span>Total ({nights} noites)</span>
+                      <span>Total ({days} diária{days !== 1 ? 's' : ''})</span>
                       <span className="text-primary-700">
                         {formatCurrency(estimatedTotal)}
                       </span>
@@ -715,7 +840,7 @@ export default function Bookings() {
                   disabled={
                     isSubmitting || 
                     !selectedArea || 
-                    nights <= 0 ||
+                    days <= 0 ||
                     !!(packagePeriod && !packagePeriod.isExactMatch) ||
                     !!(packagePeriod && packagePeriod.isExactMatch && hasExistingBooking)
                   }
@@ -732,6 +857,256 @@ export default function Bookings() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Detalhes da Reserva */}
+      {isDetailModalOpen && selectedBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neutral-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="glass rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 animate-slide-up shadow-2xl">
+            <div className="flex items-center justify-between mb-6 sticky top-0 bg-white/80 backdrop-blur-sm pb-4 border-b border-neutral-200">
+              <h2 className="font-display text-2xl font-bold text-neutral-800">
+                Detalhes da Reserva
+              </h2>
+              <button
+                onClick={() => {
+                  setIsDetailModalOpen(false);
+                  setSelectedBooking(null);
+                }}
+                className="p-2 rounded-lg text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {(() => {
+                const area = selectedBooking.area as Area;
+                const isExternalBooking = selectedBooking.guestModel === 'Guest';
+                const guest = typeof selectedBooking.guest === 'string' ? null : (selectedBooking.guest as Guest | User);
+                const isGuest = isExternalBooking && guest && typeof guest === 'object' && 'phone' in guest && !('email' in guest);
+
+                return (
+                  <>
+                    {/* Informações da Área */}
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-primary-50 to-white border-2 border-primary-200">
+                      <h3 className="font-semibold text-lg text-neutral-800 mb-3 flex items-center gap-2">
+                        <HomeIcon className="w-5 h-5 text-primary-600" />
+                        Informações da Área
+                      </h3>
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-start gap-2">
+                          <span className="font-medium text-neutral-600 min-w-[100px]">Nome:</span>
+                          <span className="text-neutral-800">{area?.name || 'Área removida'}</span>
+                        </div>
+                        {area && (
+                          <>
+                            <div className="flex items-start gap-2">
+                              <span className="font-medium text-neutral-600 min-w-[100px]">Endereço:</span>
+                              <span className="text-neutral-800">{area.address}</span>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <span className="font-medium text-neutral-600 min-w-[100px]">Preço/dia:</span>
+                              <span className="text-neutral-800">{formatCurrency(area.pricePerDay)}</span>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <span className="font-medium text-neutral-600 min-w-[100px]">Máx. hóspedes:</span>
+                              <span className="text-neutral-800">{area.maxGuests}</span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Informações do Hóspede */}
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-neutral-50 to-white border-2 border-neutral-200">
+                      <h3 className="font-semibold text-lg text-neutral-800 mb-3 flex items-center gap-2">
+                        <UserIcon className="w-5 h-5 text-primary-600" />
+                        Informações do Locatário
+                        {isExternalBooking && (
+                          <span className="ml-2 inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 border border-blue-200">
+                            <ExternalLink className="w-3 h-3" />
+                            Reserva Externa
+                          </span>
+                        )}
+                      </h3>
+                      
+                      {!guest ? (
+                        <div className="text-sm text-neutral-500 italic">
+                          Informações do hóspede não disponíveis
+                        </div>
+                      ) : isGuest ? (
+                        <div className="space-y-3 text-sm">
+                          <div className="flex items-start gap-2">
+                            <span className="font-medium text-neutral-600 min-w-[120px] flex items-center gap-1">
+                              <UserIcon className="w-4 h-4" />
+                              Nome:
+                            </span>
+                            <span className="text-neutral-800">{(guest as Guest).name}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="font-medium text-neutral-600 min-w-[120px] flex items-center gap-1">
+                              <Phone className="w-4 h-4" />
+                              Celular:
+                            </span>
+                            <span className="text-neutral-800">{formatPhone((guest as Guest).phone)}</span>
+                          </div>
+                          {(guest as Guest).cpf && (
+                            <div className="flex items-start gap-2">
+                              <span className="font-medium text-neutral-600 min-w-[120px] flex items-center gap-1">
+                                <CreditCard className="w-4 h-4" />
+                                CPF:
+                              </span>
+                              <span className="text-neutral-800">{formatCPF((guest as Guest).cpf!)}</span>
+                            </div>
+                          )}
+                          {(guest as Guest).birthDate && (
+                            <div className="flex items-start gap-2">
+                              <span className="font-medium text-neutral-600 min-w-[120px] flex items-center gap-1">
+                                <CalendarIcon className="w-4 h-4" />
+                                Data de Nascimento:
+                              </span>
+                              <span className="text-neutral-800">
+                                {new Date((guest as Guest).birthDate!).toLocaleDateString('pt-BR', {
+                                  day: '2-digit',
+                                  month: 'long',
+                                  year: 'numeric'
+                                })}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-3 text-sm">
+                          <div className="flex items-start gap-2">
+                            <span className="font-medium text-neutral-600 min-w-[120px] flex items-center gap-1">
+                              <UserIcon className="w-4 h-4" />
+                              Nome:
+                            </span>
+                            <span className="text-neutral-800">{(guest as User).name}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="font-medium text-neutral-600 min-w-[120px] flex items-center gap-1">
+                              <Mail className="w-4 h-4" />
+                              E-mail:
+                            </span>
+                            <span className="text-neutral-800">{(guest as User).email}</span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <span className="font-medium text-neutral-600 min-w-[120px] flex items-center gap-1">
+                              <Info className="w-4 h-4" />
+                              Tipo:
+                            </span>
+                            <span className="text-neutral-800">
+                              {(guest as User).role === 'admin' ? 'Administrador' : 'Usuário Registrado'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Informações da Reserva */}
+                    <div className="p-4 rounded-xl bg-gradient-to-br from-primary-50 to-white border-2 border-primary-200">
+                      <h3 className="font-semibold text-lg text-neutral-800 mb-3 flex items-center gap-2">
+                        <Calendar className="w-5 h-5 text-primary-600" />
+                        Informações da Reserva
+                      </h3>
+                      <div className="space-y-3 text-sm">
+                        <div className="flex items-start gap-2">
+                          <span className="font-medium text-neutral-600 min-w-[120px]">ID da Reserva:</span>
+                          <span className="text-neutral-800 font-mono text-xs">{selectedBooking._id}</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="font-medium text-neutral-600 min-w-[120px] flex items-center gap-1">
+                            <CalendarIcon className="w-4 h-4" />
+                            Check-in:
+                          </span>
+                          <span className="text-neutral-800">
+                            {new Date(selectedBooking.checkIn).toLocaleDateString('pt-BR', {
+                              day: '2-digit',
+                              month: 'long',
+                              year: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="font-medium text-neutral-600 min-w-[120px] flex items-center gap-1">
+                            <CalendarIcon className="w-4 h-4" />
+                            Check-out:
+                          </span>
+                          <span className="text-neutral-800">
+                            {new Date(selectedBooking.checkOut).toLocaleDateString('pt-BR', {
+                              day: '2-digit',
+                              month: 'long',
+                              year: 'numeric'
+                            })}
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="font-medium text-neutral-600 min-w-[120px] flex items-center gap-1">
+                            <Users className="w-4 h-4" />
+                            Número de Hóspedes:
+                          </span>
+                          <span className="text-neutral-800">{selectedBooking.guests}</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="font-medium text-neutral-600 min-w-[120px] flex items-center gap-1">
+                            <DollarSign className="w-4 h-4" />
+                            Preço Total:
+                          </span>
+                          <span className="text-neutral-800 font-semibold text-lg text-primary-700">
+                            {formatCurrency(selectedBooking.totalPrice)}
+                          </span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="font-medium text-neutral-600 min-w-[120px]">Status:</span>
+                          <span>{getStatusBadge(selectedBooking.status)}</span>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <span className="font-medium text-neutral-600 min-w-[120px]">Criada em:</span>
+                          <span className="text-neutral-800">
+                            {new Date(selectedBooking.createdAt).toLocaleDateString('pt-BR', {
+                              day: '2-digit',
+                              month: 'long',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </span>
+                        </div>
+                        {selectedBooking.updatedAt !== selectedBooking.createdAt && (
+                          <div className="flex items-start gap-2">
+                            <span className="font-medium text-neutral-600 min-w-[120px]">Atualizada em:</span>
+                            <span className="text-neutral-800">
+                              {new Date(selectedBooking.updatedAt).toLocaleDateString('pt-BR', {
+                                day: '2-digit',
+                                month: 'long',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit'
+                              })}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+
+            <div className="mt-6 pt-4 border-t border-neutral-200">
+              <button
+                onClick={() => {
+                  setIsDetailModalOpen(false);
+                  setSelectedBooking(null);
+                }}
+                className="w-full py-3 px-4 rounded-xl bg-primary-600 text-white font-semibold hover:bg-primary-700 transition-colors"
+              >
+                Fechar
+              </button>
+            </div>
           </div>
         </div>
       )}

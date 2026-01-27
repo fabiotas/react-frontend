@@ -1,5 +1,5 @@
 import api from './api';
-import { Booking, ApiResponse, CreateBookingData, UpdateBookingData } from '../types';
+import { Booking, ApiResponse, CreateBookingData, UpdateBookingData, ExternalBookingRequest } from '../types';
 
 interface BookingsResponse {
   success: boolean;
@@ -47,6 +47,12 @@ export const bookingService = {
   // Cancelar reserva
   async cancelBooking(id: string): Promise<ApiResponse<Booking>> {
     const response = await api.patch<ApiResponse<Booking>>(`/bookings/${id}/cancel`);
+    return response.data;
+  },
+
+  // Criar reserva externa (com pré-usuário/Guest)
+  async createExternalBooking(data: ExternalBookingRequest): Promise<ApiResponse<Booking>> {
+    const response = await api.post<ApiResponse<Booking>>('/bookings/external', data);
     return response.data;
   },
 };

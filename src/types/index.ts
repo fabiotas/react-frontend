@@ -117,13 +117,25 @@ export interface UpdateAreaData {
   active?: boolean;
 }
 
+// Guest Types
+export interface Guest {
+  _id: string;
+  name: string;
+  phone: string;
+  cpf?: string;
+  birthDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Booking Types
 export type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
 
 export interface Booking {
   _id: string;
   area: string | Area;
-  guest: string | User;
+  guest: string | User | Guest;
+  guestModel?: 'User' | 'Guest';
   checkIn: string;
   checkOut: string;
   totalPrice: number;
@@ -141,5 +153,21 @@ export interface CreateBookingData {
 }
 
 export interface UpdateBookingData {
+  status?: BookingStatus;
+}
+
+// External Booking Types
+export interface ExternalBookingRequest {
+  areaId: string;
+  checkIn: string;
+  checkOut: string;
+  guests: number;
+  guest: {
+    name: string;
+    phone: string;
+    cpf?: string;
+    birthDate?: string;
+  };
+  totalPrice?: number;
   status?: BookingStatus;
 }
