@@ -487,8 +487,8 @@ export default function Home() {
                 {/* Image */}
                 <Link to={`/areas/${area._id}`} className="block relative h-48 bg-gradient-to-br from-primary-100 to-primary-200 overflow-hidden">
                   {(() => {
-                    const displayImage = area.shareImage || 
-                      (area.images && area.images.length > 0 ? area.images[0] : null);
+                    // Sempre usar a primeira imagem do array para a tela principal
+                    const displayImage = area.images && area.images.length > 0 ? area.images[0] : null;
                     return displayImage ? (
                       <img
                         src={displayImage}
@@ -502,8 +502,8 @@ export default function Home() {
                       />
                     ) : null;
                   })()}
-                  <div className={`absolute inset-0 flex items-center justify-center ${area.shareImage || (area.images && area.images.length > 0 && area.images[0]) ? 'bg-black/20' : ''}`}>
-                    {!area.shareImage && (!area.images || area.images.length === 0 || !area.images[0]) && (
+                  <div className={`absolute inset-0 flex items-center justify-center ${area.images && area.images.length > 0 && area.images[0] ? 'bg-black/20' : ''}`}>
+                    {(!area.images || area.images.length === 0 || !area.images[0]) && (
                       <HomeIcon className="w-16 h-16 text-primary-300 group-hover:scale-110 transition-transform duration-300" />
                     )}
                   </div>

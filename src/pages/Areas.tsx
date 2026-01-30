@@ -195,8 +195,8 @@ export default function Areas() {
                 {/* Image */}
                 <div className="relative h-48 bg-gradient-to-br from-primary-100 to-primary-200 overflow-hidden">
                   {(() => {
-                    const displayImage = area.shareImage || 
-                      (area.images && area.images.length > 0 ? area.images[0] : null);
+                    // Sempre usar a primeira imagem do array para a tela principal
+                    const displayImage = area.images && area.images.length > 0 ? area.images[0] : null;
                     return displayImage ? (
                       <img
                         src={displayImage}

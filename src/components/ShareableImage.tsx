@@ -8,9 +8,10 @@ interface ShareableImageProps {
   endDate: Date;
   isOpen: boolean;
   onClose: () => void;
+  periodName?: string; // Nome/descrição do período especial (opcional)
 }
 
-export default function ShareableImage({ area, startDate, endDate, isOpen, onClose }: ShareableImageProps) {
+export default function ShareableImage({ area, startDate, endDate, isOpen, onClose, periodName }: ShareableImageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -24,8 +25,23 @@ export default function ShareableImage({ area, startDate, endDate, isOpen, onClo
 
   useEffect(() => {
     if (isOpen) {
-      // Carregar imagem da área
-      const areaImage = area.images && area.images.length > 0 ? area.images[0] : null;
+      // Carregar imagem para compartilhamento:
+      // 1. Se houver shareImage (imagem específica de compartilhamento), usar ela
+      // 2. Se houver shareImageIndex definido, usar images[shareImageIndex]
+      // 3. Caso contrário, usar images[0] como fallback
+      let areaImage: string | null = null;
+      
+      if (area.shareImage) {
+        areaImage = area.shareImage;
+      } else if (area.shareImageIndex !== undefined && area.images && area.images.length > 0) {
+        const index = area.shareImageIndex;
+        if (index >= 0 && index < area.images.length) {
+          areaImage = area.images[index];
+        }
+      } else if (area.images && area.images.length > 0) {
+        areaImage = area.images[0];
+      }
+      
       if (areaImage) {
         const img = new Image();
         img.crossOrigin = 'anonymous';
@@ -46,7 +62,7 @@ export default function ShareableImage({ area, startDate, endDate, isOpen, onClo
     if (isOpen && canvasRef.current && (areaImageLoaded !== null || !area.images || area.images.length === 0)) {
       generateImage();
     }
-  }, [isOpen, area, startDate, endDate, areaImageLoaded]);
+  }, [isOpen, area, startDate, endDate, areaImageLoaded, periodName]);
 
   const generateImage = async () => {
     if (!canvasRef.current) return;
@@ -147,6 +163,19 @@ export default function ShareableImage({ area, startDate, endDate, isOpen, onClo
       nameLines.forEach((line, index) => {
         ctx.fillText(line, width / 2, areaNameY + (index * 50));
       });
+
+      // Nome do período especial - abaixo do nome da área (se fornecido)
+      if (periodName) {
+        const periodNameY = areaNameY + (nameLines.length * 50) + 20;
+        ctx.font = '500 32px system-ui, -apple-system, sans-serif';
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+        ctx.textAlign = 'center';
+        
+        const periodLines = wrapText(ctx, periodName, width - 120);
+        periodLines.forEach((line, index) => {
+          ctx.fillText(line, width / 2, periodNameY + (index * 45));
+        });
+      }
 
       // Resetar sombra
       ctx.shadowColor = 'transparent';

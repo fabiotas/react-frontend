@@ -101,34 +101,49 @@ export default function Dashboard() {
   const pendingBookings = ownerBookings.filter((b) => b.status === 'pending').length;
   const confirmedBookingsCount = ownerBookings.filter((b) => b.status === 'confirmed').length;
 
-  // Calcular finais de semana disponíveis no mês atual
-  const getWeekendsInMonth = () => {
+  // Calcular os próximos 4 finais de semana
+  const getNextWeekends = () => {
     const weekends: { start: Date; end: Date }[] = [];
-    const year = currentYear;
-    const month = currentMonth;
+    const today = new Date(now);
+    today.setHours(0, 0, 0, 0);
     
-    // Primeiro dia do mês
-    const firstDay = new Date(year, month, 1);
-    // Último dia do mês
-    const lastDay = new Date(year, month + 1, 0);
+    // Encontrar a próxima sexta-feira
+    let current = new Date(today);
+    const currentDayOfWeek = current.getDay();
     
-    // Encontrar todos os finais de semana
-    const current = new Date(firstDay);
-    while (current <= lastDay) {
-      const dayOfWeek = current.getDay();
-      
-      // Sexta-feira (5)
-      if (dayOfWeek === 5) {
-        const friday = new Date(current);
-        const sunday = new Date(current);
-        sunday.setDate(sunday.getDate() + 2);
-        
-        // Só adiciona se domingo ainda estiver no mês ou próximo
-        if (friday >= now) {
-          weekends.push({ start: friday, end: sunday });
-        }
+    // Se hoje é sexta-feira ou depois, começar da próxima sexta
+    // Se não, encontrar a próxima sexta-feira
+    if (currentDayOfWeek < 5) {
+      // Se ainda não chegou na sexta desta semana
+      const daysUntilFriday = 5 - currentDayOfWeek;
+      current.setDate(current.getDate() + daysUntilFriday);
+    } else if (currentDayOfWeek > 5) {
+      // Se já passou a sexta desta semana, ir para a próxima
+      const daysUntilNextFriday = 5 + (7 - currentDayOfWeek);
+      current.setDate(current.getDate() + daysUntilNextFriday);
+    } else {
+      // Se é sexta-feira hoje, verificar se já passou meio-dia
+      // Por segurança, vamos considerar a próxima sexta se já for tarde
+      const currentHour = now.getHours();
+      if (currentHour >= 12) {
+        // Se já passou meio-dia na sexta, considerar a próxima
+        current.setDate(current.getDate() + 7);
       }
-      current.setDate(current.getDate() + 1);
+    }
+    
+    // Coletar os próximos 4 finais de semana
+    while (weekends.length < 4) {
+      const friday = new Date(current);
+      const sunday = new Date(current);
+      sunday.setDate(sunday.getDate() + 2);
+      
+      // Só adiciona se a sexta ainda não passou (ou é hoje)
+      if (friday >= today) {
+        weekends.push({ start: friday, end: sunday });
+      }
+      
+      // Ir para a próxima sexta-feira
+      current.setDate(current.getDate() + 7);
     }
     
     return weekends;
@@ -156,7 +171,7 @@ export default function Dashboard() {
     });
   };
 
-  const weekends = getWeekendsInMonth();
+  const weekends = getNextWeekends();
 
   // Dados mensais dos últimos 6 meses
   const getMonthlyStats = (): MonthlyStats[] => {
@@ -329,7 +344,7 @@ export default function Dashboard() {
         <div className="glass rounded-2xl p-6 animate-slide-up delay-500">
           <h2 className="font-display text-lg font-bold text-neutral-800 mb-4 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-primary-600" />
-            Finais de Semana - {getMonthName().charAt(0).toUpperCase() + getMonthName().slice(1)}
+            Próximos Finais de Semana
           </h2>
           
           {myAreas.length === 0 ? (
@@ -347,7 +362,7 @@ export default function Dashboard() {
           ) : weekends.length === 0 ? (
             <div className="text-center py-8">
               <CalendarX className="w-12 h-12 text-neutral-300 mx-auto mb-3" />
-              <p className="text-neutral-500">Não há mais finais de semana neste mês</p>
+              <p className="text-neutral-500">Não há finais de semana disponíveis</p>
             </div>
           ) : (
             <div className="space-y-3">

@@ -43,7 +43,23 @@ export default function AreaDetails() {
   useEffect(() => {
     if (!area) return;
 
-    const shareImage = area.shareImage || (area.images && area.images.length > 0 ? area.images[0] : '');
+    // Determinar imagem para compartilhamento (meta tags):
+    // 1. Se houver shareImage (imagem específica de compartilhamento), usar ela
+    // 2. Se houver shareImageIndex definido, usar images[shareImageIndex]
+    // 3. Caso contrário, usar images[0] como fallback
+    let shareImage = '';
+    if (area.shareImage) {
+      shareImage = area.shareImage;
+    } else if (area.shareImageIndex !== undefined && area.images && area.images.length > 0) {
+      const index = area.shareImageIndex;
+      if (index >= 0 && index < area.images.length) {
+        shareImage = area.images[index];
+      } else if (area.images.length > 0) {
+        shareImage = area.images[0];
+      }
+    } else if (area.images && area.images.length > 0) {
+      shareImage = area.images[0];
+    }
     const title = `${area.name} - AreaHub`;
     const description = area.description || '';
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { areaService } from '../services/areaService';
 import { Area, SpecialPrice, SpecialPriceType } from '../types';
 import { useToast } from '../components/Toast';
+import ShareableImage from '../components/ShareableImage';
 import {
   Tag,
   Loader2,
@@ -12,6 +13,7 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
+  Share2,
 } from 'lucide-react';
 
 const DAYS_OF_WEEK = [
@@ -30,6 +32,7 @@ export default function SpecialPrices() {
   const [expandedAreaId, setExpandedAreaId] = useState<string | null>(null);
   const [savingAreaId, setSavingAreaId] = useState<string | null>(null);
   const { showToast, ToastContainer } = useToast();
+  const [shareModal, setShareModal] = useState<{ area: Area; startDate: Date; endDate: Date; periodName?: string } | null>(null);
 
   // Estado local para edições
   const [editingPrices, setEditingPrices] = useState<Record<string, SpecialPrice[]>>({});
@@ -408,13 +411,29 @@ export default function SpecialPrices() {
                                     <span className="text-xs text-neutral-500">Ativo</span>
                                   </label>
                                 </div>
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveSpecialPrice(area._id, index)}
-                                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                  {sp.type === 'date_range' && sp.active && !isPast && sp.startDate && sp.endDate && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const startDate = new Date(sp.startDate + 'T00:00:00');
+                                        const endDate = new Date(sp.endDate + 'T00:00:00');
+                                        setShareModal({ area, startDate, endDate, periodName: sp.name });
+                                      }}
+                                      className="p-1.5 text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                      title="Compartilhar período especial"
+                                    >
+                                      <Share2 className="w-4 h-4" />
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveSpecialPrice(area._id, index)}
+                                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </button>
+                                </div>
                               </div>
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -579,6 +598,18 @@ export default function SpecialPrices() {
             );
           })}
         </div>
+      )}
+
+      {/* Share Modal */}
+      {shareModal && (
+        <ShareableImage
+          area={shareModal.area}
+          startDate={shareModal.startDate}
+          endDate={shareModal.endDate}
+          isOpen={!!shareModal}
+          onClose={() => setShareModal(null)}
+          periodName={shareModal.periodName}
+        />
       )}
     </div>
   );
