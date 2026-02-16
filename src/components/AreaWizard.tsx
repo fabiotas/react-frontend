@@ -11,6 +11,10 @@ interface AreaWizardProps {
     name: string;
     description: string;
     address: string;
+    bairro?: string;
+    nomeCidade?: string;
+    whatsapp?: string;
+    showWhatsapp?: boolean;
     pricePerDay: number;
     maxGuests: number;
     amenities: string[];
@@ -32,6 +36,10 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
     name: '',
     description: '',
     address: '',
+    bairro: '',
+    nomeCidade: '',
+    whatsapp: '',
+    showWhatsapp: false,
     pricePerDay: 0,
     maxGuests: 1,
     amenities: '',
@@ -57,6 +65,10 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
           name: editingArea.name || '',
           description: editingArea.description || '',
           address: editingArea.address || '',
+          bairro: editingArea.bairro || '',
+          nomeCidade: editingArea.nomeCidade || '',
+          whatsapp: editingArea.whatsapp || '',
+          showWhatsapp: editingArea.showWhatsapp || false,
           pricePerDay: editingArea.pricePerDay || 0,
           maxGuests: editingArea.maxGuests || 1,
           amenities: editingArea.amenities?.join(', ') || '',
@@ -75,6 +87,10 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
           name: '',
           description: '',
           address: '',
+          bairro: '',
+          nomeCidade: '',
+          whatsapp: '',
+          showWhatsapp: false,
           pricePerDay: 0,
           maxGuests: 1,
           amenities: '',
@@ -290,13 +306,57 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
         shareData.shareImageIndex = shareImageIndex;
       }
 
-      await onComplete({
-        ...basicInfo,
+      // Preparar dados para envio
+      const submitData: {
+        name: string;
+        description: string;
+        address: string;
+        bairro?: string;
+        nomeCidade?: string;
+        whatsapp?: string;
+        showWhatsapp: boolean;
+        pricePerDay: number;
+        maxGuests: number;
+        amenities: string[];
+        images: string[];
+        shareImageIndex?: number;
+        shareImage?: string;
+        faqs: FAQ[];
+      } = {
+        name: basicInfo.name,
+        description: basicInfo.description,
+        address: basicInfo.address,
+        pricePerDay: basicInfo.pricePerDay,
+        maxGuests: basicInfo.maxGuests,
         amenities: amenitiesArray,
         images,
+        showWhatsapp: basicInfo.showWhatsapp,
         ...shareData,
-        faqs: faqs.filter((faq: FAQ) => faq.question.trim() && faq.answer.trim()),
-      });
+      };
+
+      // Sempre incluir bairro, nomeCidade e whatsapp quando editando para garantir atualização
+      // Quando editando, sempre enviar os campos (mesmo que vazios) para permitir limpar
+      const bairroValue = basicInfo.bairro.trim();
+      const nomeCidadeValue = basicInfo.nomeCidade.trim();
+      const whatsappValue = basicInfo.whatsapp.trim();
+
+      if (editingArea) {
+        // Na edição, sempre enviar os campos (usar string vazia se vazio para garantir que seja enviado)
+        submitData.bairro = bairroValue;
+        submitData.nomeCidade = nomeCidadeValue;
+        submitData.whatsapp = whatsappValue;
+      } else {
+        // Na criação, só enviar se tiver valor
+        if (bairroValue) submitData.bairro = bairroValue;
+        if (nomeCidadeValue) submitData.nomeCidade = nomeCidadeValue;
+        if (whatsappValue) submitData.whatsapp = whatsappValue;
+      }
+
+      // Filtrar FAQs válidos (com pergunta e resposta preenchidas)
+      const validFaqs = faqs.filter((faq: FAQ) => faq.question.trim() && faq.answer.trim());
+      submitData.faqs = validFaqs;
+
+      await onComplete(submitData);
       
       // Reset será feito pelo useEffect quando o modal fechar
     } catch (error) {
@@ -392,8 +452,73 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
                   onChange={(e) => setBasicInfo({ ...basicInfo, address: e.target.value })}
                   required
                   className="w-full px-4 py-3 rounded-xl bg-white border border-neutral-200 text-neutral-800 placeholder-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
-                  placeholder="Rua, número, cidade..."
+                  placeholder="Rua, número..."
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-neutral-700">
+                    Bairro
+                  </label>
+                  <input
+                    type="text"
+                    value={basicInfo.bairro}
+                    onChange={(e) => setBasicInfo({ ...basicInfo, bairro: e.target.value })}
+                    maxLength={100}
+                    className="w-full px-4 py-3 rounded-xl bg-white border border-neutral-200 text-neutral-800 placeholder-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
+                    placeholder="Nome do bairro"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-neutral-700">
+                    Cidade
+                  </label>
+                  <input
+                    type="text"
+                    value={basicInfo.nomeCidade}
+                    onChange={(e) => setBasicInfo({ ...basicInfo, nomeCidade: e.target.value })}
+                    maxLength={100}
+                    className="w-full px-4 py-3 rounded-xl bg-white border border-neutral-200 text-neutral-800 placeholder-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
+                    placeholder="Nome da cidade"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-neutral-700">
+                  WhatsApp
+                </label>
+                <input
+                  type="text"
+                  value={basicInfo.whatsapp}
+                  onChange={(e) => {
+                    // Remover caracteres não numéricos
+                    const value = e.target.value.replace(/\D/g, '');
+                    if (value.length <= 15) {
+                      setBasicInfo({ ...basicInfo, whatsapp: value });
+                    }
+                  }}
+                  className="w-full px-4 py-3 rounded-xl bg-white border border-neutral-200 text-neutral-800 placeholder-neutral-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200"
+                  placeholder="11987654321"
+                />
+                <p className="text-xs text-neutral-500">
+                  Apenas números (10 a 15 dígitos)
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="showWhatsapp"
+                  checked={basicInfo.showWhatsapp}
+                  onChange={(e) => setBasicInfo({ ...basicInfo, showWhatsapp: e.target.checked })}
+                  className="w-4 h-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                />
+                <label htmlFor="showWhatsapp" className="text-sm font-medium text-neutral-700 cursor-pointer">
+                  Exibir WhatsApp no perfil da área
+                </label>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

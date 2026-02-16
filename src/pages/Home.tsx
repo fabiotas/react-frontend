@@ -161,7 +161,9 @@ export default function Home() {
     const matchesSearch = 
       area.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       area.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      area.description.toLowerCase().includes(searchTerm.toLowerCase());
+      area.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (area.bairro && area.bairro.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (area.nomeCidade && area.nomeCidade.toLowerCase().includes(searchTerm.toLowerCase()));
     
     if (!matchesSearch) return false;
     

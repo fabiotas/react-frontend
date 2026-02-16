@@ -95,6 +95,10 @@ export default function Areas() {
     name: string;
     description: string;
     address: string;
+    bairro?: string;
+    nomeCidade?: string;
+    whatsapp?: string;
+    showWhatsapp?: boolean;
     pricePerDay: number;
     maxGuests: number;
     amenities: string[];
@@ -125,7 +129,9 @@ export default function Areas() {
   const filteredAreas = areas.filter(
     (area) =>
       area.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      area.address.toLowerCase().includes(searchTerm.toLowerCase())
+      area.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (area.bairro && area.bairro.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (area.nomeCidade && area.nomeCidade.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const formatCurrency = (value: number) => {

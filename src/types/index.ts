@@ -74,6 +74,10 @@ export interface Area {
   name: string;
   description: string;
   address: string;
+  bairro?: string;
+  nomeCidade?: string;
+  whatsapp?: string;
+  showWhatsapp?: boolean;
   pricePerDay: number;
   maxGuests: number;
   amenities: string[];
@@ -92,6 +96,10 @@ export interface CreateAreaData {
   name: string;
   description: string;
   address: string;
+  bairro?: string;
+  nomeCidade?: string;
+  whatsapp?: string;
+  showWhatsapp?: boolean;
   pricePerDay: number;
   maxGuests: number;
   amenities?: string[];
@@ -106,6 +114,10 @@ export interface UpdateAreaData {
   name?: string;
   description?: string;
   address?: string;
+  bairro?: string;
+  nomeCidade?: string;
+  whatsapp?: string;
+  showWhatsapp?: boolean;
   pricePerDay?: number;
   maxGuests?: number;
   amenities?: string[];

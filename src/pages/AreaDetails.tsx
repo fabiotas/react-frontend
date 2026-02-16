@@ -22,6 +22,7 @@ import {
   LogIn,
   HelpCircle,
   Tag,
+  Phone,
 } from 'lucide-react';
 
 export default function AreaDetails() {
@@ -362,9 +363,39 @@ export default function AreaDetails() {
                 <h1 className="font-display text-3xl sm:text-4xl font-bold text-neutral-800 mb-4">
                   {area.name}
                 </h1>
-                <div className="flex items-center gap-2 text-neutral-600 mb-6">
-                  <MapPin className="w-5 h-5 text-primary-600 flex-shrink-0" />
-                  <span className="text-lg">{area.address}</span>
+                <div className="space-y-2 mb-6">
+                  <div className="flex items-center gap-2 text-neutral-600">
+                    <MapPin className="w-5 h-5 text-primary-600 flex-shrink-0" />
+                    <span className="text-lg">{area.address}</span>
+                  </div>
+                  {(area.bairro || area.nomeCidade) && (
+                    <div className="flex items-center gap-2 text-neutral-500 text-sm pl-7">
+                      {area.bairro && <span>{area.bairro}</span>}
+                      {area.bairro && area.nomeCidade && <span>•</span>}
+                      {area.nomeCidade && <span>{area.nomeCidade}</span>}
+                    </div>
+                  )}
+                  {area.showWhatsapp && area.whatsapp && (
+                    <div className="flex items-center gap-2 text-primary-600 pl-7">
+                      <Phone className="w-4 h-4" />
+                      <a
+                        href={`https://wa.me/${area.whatsapp}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium hover:underline"
+                      >
+                        {(() => {
+                          const phone = area.whatsapp;
+                          if (phone.length === 11) {
+                            return phone.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                          } else if (phone.length === 10) {
+                            return phone.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+                          }
+                          return phone;
+                        })()}
+                      </a>
+                    </div>
+                  )}
                 </div>
 
                 {/* Description */}
