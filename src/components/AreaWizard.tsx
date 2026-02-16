@@ -306,6 +306,9 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
         shareData.shareImageIndex = shareImageIndex;
       }
 
+      // Filtrar FAQs válidos (com pergunta e resposta preenchidas)
+      const validFaqs = faqs.filter((faq: FAQ) => faq.question.trim() && faq.answer.trim());
+
       // Preparar dados para envio
       const submitData: {
         name: string;
@@ -331,6 +334,7 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
         amenities: amenitiesArray,
         images,
         showWhatsapp: basicInfo.showWhatsapp,
+        faqs: validFaqs,
         ...shareData,
       };
 
@@ -351,10 +355,6 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
         if (nomeCidadeValue) submitData.nomeCidade = nomeCidadeValue;
         if (whatsappValue) submitData.whatsapp = whatsappValue;
       }
-
-      // Filtrar FAQs válidos (com pergunta e resposta preenchidas)
-      const validFaqs = faqs.filter((faq: FAQ) => faq.question.trim() && faq.answer.trim());
-      submitData.faqs = validFaqs;
 
       await onComplete(submitData);
       
