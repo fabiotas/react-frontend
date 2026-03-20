@@ -2,7 +2,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, LoginCredentials, RegisterData, AuthResponse } from '../types';
 import { authService } from '../services/authService';
-import { clearSupabaseTokenCache } from '../services/supabase';
 
 interface AuthContextType {
   user: User | null;
@@ -147,8 +146,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setToken(null);
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    // Limpar cache do token do Supabase
-    clearSupabaseTokenCache();
   };
 
   const updateUser = (updatedUser: User) => {

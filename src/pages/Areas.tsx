@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import AreaWizard from '../components/AreaWizard';
+import { getAreaPreviewImage } from '../utils/areaImage';
 
 export default function Areas() {
   const [areas, setAreas] = useState<Area[]>([]);
@@ -201,8 +202,7 @@ export default function Areas() {
                 {/* Image */}
                 <div className="relative h-48 bg-gradient-to-br from-primary-100 to-primary-200 overflow-hidden">
                   {(() => {
-                    // Sempre usar a primeira imagem do array para a tela principal
-                    const displayImage = area.images && area.images.length > 0 ? area.images[0] : null;
+                    const displayImage = getAreaPreviewImage(area);
                     return displayImage ? (
                       <img
                         src={displayImage}

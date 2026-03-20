@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, ChevronLeft, ChevronRight, Upload, Image as ImageIcon, Trash2, Plus, Loader2, Share2 } from 'lucide-react';
 import { Area, FAQ } from '../types';
-import { uploadImage, deleteImage } from '../services/supabase';
+import { uploadService } from '../services/uploadService';
 import { useToast } from './Toast';
 
 interface AreaWizardProps {
@@ -48,7 +48,6 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
   // Etapa 2: Imagens
   const [images, setImages] = useState<string[]>([]);
   const [uploadingImages, setUploadingImages] = useState<string[]>([]);
-  const [tempAreaId, setTempAreaId] = useState<string>('');
   const [shareImageIndex, setShareImageIndex] = useState<number>(0);
   const [shareImage, setShareImage] = useState<string>(''); // Imagem específica de compartilhamento
   const [uploadingShareImage, setUploadingShareImage] = useState<boolean>(false);
@@ -80,7 +79,6 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
         setShareImage(editingArea.shareImage || '');
         // Se tiver shareImage ou não tiver imagens, usar imagem específica
         setUseCustomShareImage(!!editingArea.shareImage || areaImages.length === 0);
-        setTempAreaId(editingArea._id); // Usar ID real quando editando
       } else {
         // Reset para novo cadastro
         setBasicInfo({
@@ -100,7 +98,6 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
         setShareImageIndex(0);
         setShareImage('');
         setUseCustomShareImage(false);
-        setTempAreaId('');
       }
       setCurrentStep(1);
     }
@@ -119,13 +116,6 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    // Usar ID real da área se estiver editando, senão criar temporário
-    let areaId = tempAreaId;
-    if (!areaId) {
-      areaId = `temp-${Date.now()}`;
-      setTempAreaId(areaId);
-    }
-
       for (const file of Array.from(files)) {
         if (!file.type.startsWith('image/')) {
           showToast('Apenas arquivos de imagem são permitidos', 'error');
@@ -142,7 +132,7 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
         setUploadingImages((prev: string[]) => [...prev, fileName]);
 
         try {
-          const imageUrl = await uploadImage(file, areaId);
+          const imageUrl = await uploadService.uploadSingle(file, 'areas');
           setImages((prev: string[]) => {
             const newImages = [...prev, imageUrl];
             // Se for a primeira imagem, definir como imagem de compartilhamento
@@ -164,42 +154,19 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
     e.target.value = '';
   };
 
-  const handleRemoveImage = async (imageUrl: string, index: number) => {
-    try {
-      // Se for uma URL do Supabase, tentar deletar
-      if (imageUrl.includes('supabase')) {
-        await deleteImage(imageUrl);
-      }
-      const newImages = images.filter((_: string, i: number) => i !== index);
-      setImages(newImages);
-      
-      // Ajustar shareImageIndex se necessário
-      if (newImages.length === 0) {
-        setShareImageIndex(0);
-      } else if (shareImageIndex >= newImages.length) {
-        setShareImageIndex(0);
-      } else if (index < shareImageIndex) {
-        // Se removemos uma imagem antes da selecionada, ajustar índice
-        setShareImageIndex(shareImageIndex - 1);
-      }
-      
-      showToast('Imagem removida', 'success');
-    } catch (error) {
-      // Se falhar ao deletar, apenas remover da lista
-      const newImages = images.filter((_: string, i: number) => i !== index);
-      setImages(newImages);
-      
-      // Ajustar shareImageIndex se necessário
-      if (newImages.length === 0) {
-        setShareImageIndex(0);
-      } else if (shareImageIndex >= newImages.length) {
-        setShareImageIndex(0);
-      } else if (index < shareImageIndex) {
-        setShareImageIndex(shareImageIndex - 1);
-      }
-      
-      showToast('Imagem removida da lista', 'success');
+  const handleRemoveImage = async (index: number) => {
+    const newImages = images.filter((_: string, i: number) => i !== index);
+    setImages(newImages);
+
+    if (newImages.length === 0) {
+      setShareImageIndex(0);
+    } else if (shareImageIndex >= newImages.length) {
+      setShareImageIndex(0);
+    } else if (index < shareImageIndex) {
+      setShareImageIndex(shareImageIndex - 1);
     }
+
+    showToast('Imagem removida da lista', 'success');
   };
 
   const handleShareImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -216,15 +183,9 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
       return;
     }
 
-    let areaId = tempAreaId;
-    if (!areaId) {
-      areaId = `temp-${Date.now()}`;
-      setTempAreaId(areaId);
-    }
-
     setUploadingShareImage(true);
     try {
-      const imageUrl = await uploadImage(file, areaId);
+      const imageUrl = await uploadService.uploadSingle(file, 'areas');
       setShareImage(imageUrl);
       setUseCustomShareImage(true);
       showToast('Imagem de compartilhamento enviada com sucesso', 'success');
@@ -238,18 +199,9 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
   };
 
   const handleRemoveShareImage = async () => {
-    try {
-      if (shareImage.includes('supabase')) {
-        await deleteImage(shareImage);
-      }
-      setShareImage('');
-      setUseCustomShareImage(false);
-      showToast('Imagem de compartilhamento removida', 'success');
-    } catch (error) {
-      setShareImage('');
-      setUseCustomShareImage(false);
-      showToast('Imagem de compartilhamento removida', 'success');
-    }
+    setShareImage('');
+    setUseCustomShareImage(false);
+    showToast('Imagem de compartilhamento removida', 'success');
   };
 
   const handleAddFAQ = () => {
@@ -773,7 +725,7 @@ export default function AreaWizard({ isOpen, onClose, onComplete, editingArea }:
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleRemoveImage(imageUrl, index);
+                              handleRemoveImage(index);
                             }}
                             className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                             title="Remover imagem"
