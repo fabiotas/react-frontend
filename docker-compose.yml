@@ -11,9 +11,7 @@ services:
     env_file:
       - .env
     environment:
-      - VITE_API_URL=/api
-      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL:-}
-      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY:-}
+      - VITE_API_URL=${VITE_API_URL:-https://api.areahub.com.br}
       - VITE_API_TARGET=${VITE_API_TARGET:-}
     volumes:
       - .:/app
