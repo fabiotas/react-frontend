@@ -28,17 +28,17 @@ function App() {
     const path = location.pathname;
     const exactTitleMap: Record<string, string> = {
       '/': 'AreaHub',
-      '/login': 'Entrar - AreaHub',
-      '/register': 'Criar Conta - AreaHub',
-      '/dashboard': 'Dashboard - AreaHub',
-      '/areas': 'Áreas - AreaHub',
-      '/bookings': 'Reservas - AreaHub',
-      '/external-booking': 'Reserva Externa - AreaHub',
-      '/special-prices': 'Preços Especiais - AreaHub',
-      '/users': 'Usuários - AreaHub',
-      '/admin/users': 'Aprovação de Usuários - AreaHub',
-      '/admin/areas': 'Aprovação de Áreas - AreaHub',
-      '/profile': 'Meu Perfil - AreaHub',
+      '/login': 'AreaHub - Entrar',
+      '/register': 'AreaHub - Criar Conta',
+      '/dashboard': 'AreaHub - Dashboard',
+      '/areas': 'AreaHub - Áreas',
+      '/bookings': 'AreaHub - Reservas',
+      '/external-booking': 'AreaHub - Reserva Externa',
+      '/special-prices': 'AreaHub - Preços Especiais',
+      '/users': 'AreaHub - Usuários',
+      '/admin/users': 'AreaHub - Aprovação de Usuários',
+      '/admin/areas': 'AreaHub - Aprovação de Áreas',
+      '/profile': 'AreaHub - Meu Perfil',
     };
 
     // `AreaDetails` já define o título dinâmico com o nome da área.

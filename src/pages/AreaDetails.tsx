@@ -61,7 +61,9 @@ export default function AreaDetails() {
     } else if (area.images && area.images.length > 0) {
       shareImage = area.images[0];
     }
-    const title = `${area.name} - AreaHub`;
+    const shortAreaName =
+      area.name.length > 38 ? `${area.name.slice(0, 35).trim()}...` : area.name;
+    const title = `AreaHub - ${shortAreaName}`;
     const description = area.description || '';
 
     // Remover meta tags antigas
