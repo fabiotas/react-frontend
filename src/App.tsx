@@ -1,4 +1,5 @@
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
@@ -19,8 +20,32 @@ import ExternalBooking from './pages/ExternalBooking';
 
 function App() {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const location = useLocation();
   const approvalStatus = user?.approvalStatus ?? 'approved';
   const canUseApp = isAuthenticated && approvalStatus === 'approved';
+
+  useEffect(() => {
+    const path = location.pathname;
+    const exactTitleMap: Record<string, string> = {
+      '/': 'AreaHub',
+      '/login': 'Entrar - AreaHub',
+      '/register': 'Criar Conta - AreaHub',
+      '/dashboard': 'Dashboard - AreaHub',
+      '/areas': 'Áreas - AreaHub',
+      '/bookings': 'Reservas - AreaHub',
+      '/external-booking': 'Reserva Externa - AreaHub',
+      '/special-prices': 'Preços Especiais - AreaHub',
+      '/users': 'Usuários - AreaHub',
+      '/admin/users': 'Aprovação de Usuários - AreaHub',
+      '/admin/areas': 'Aprovação de Áreas - AreaHub',
+      '/profile': 'Meu Perfil - AreaHub',
+    };
+
+    // `AreaDetails` já define o título dinâmico com o nome da área.
+    if (path.startsWith('/areas/')) return;
+
+    document.title = exactTitleMap[path] || 'AreaHub';
+  }, [location.pathname]);
 
   if (isLoading) {
     return (
