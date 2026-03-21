@@ -157,8 +157,10 @@ export default function AdminUsers() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => (
-                  <tr key={u._id} className="border-b border-neutral-100 hover:bg-neutral-50 transition-colors">
+                {users.map((u) => {
+                  const userId = u._id || (u as User & { id?: string }).id;
+                  return (
+                  <tr key={userId || u.email} className="border-b border-neutral-100 hover:bg-neutral-50 transition-colors">
                     <td className="py-4 px-6">
                       <div>
                         <p className="text-neutral-800 font-medium">{u.name}</p>
@@ -192,19 +194,22 @@ export default function AdminUsers() {
                     <td className="py-4 px-6">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => handleAction(u._id, 'approve')}
+                          onClick={() => userId && handleAction(userId, 'approve')}
+                          disabled={!userId}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary-100 text-primary-800 hover:bg-primary-200"
                         >
                           Aprovar
                         </button>
                         <button
-                          onClick={() => handleAction(u._id, 'reject')}
+                          onClick={() => userId && handleAction(userId, 'reject')}
+                          disabled={!userId}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-yellow-100 text-yellow-800 hover:bg-yellow-200"
                         >
                           Reprovar
                         </button>
                         <button
-                          onClick={() => handleAction(u._id, 'block')}
+                          onClick={() => userId && handleAction(userId, 'block')}
+                          disabled={!userId}
                           className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-red-100 text-red-800 hover:bg-red-200 inline-flex items-center gap-1"
                         >
                           <Ban className="w-3 h-3" />
@@ -213,7 +218,7 @@ export default function AdminUsers() {
                       </div>
                     </td>
                   </tr>
-                ))}
+                )})}
               </tbody>
             </table>
           </div>
