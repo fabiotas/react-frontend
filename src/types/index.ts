@@ -3,6 +3,7 @@ export interface User {
   name: string;
   email: string;
   role: 'user' | 'admin';
+  approvalStatus: 'pending' | 'approved' | 'rejected' | 'blocked';
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -38,6 +39,7 @@ export interface UpdateUserData {
   name?: string;
   email?: string;
   role?: 'user' | 'admin';
+  approvalStatus?: 'pending' | 'approved' | 'rejected' | 'blocked';
   active?: boolean;
 }
 
@@ -87,6 +89,7 @@ export interface Area {
   faqs?: FAQ[];
   specialPrices?: SpecialPrice[];
   owner: string | User;
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -126,6 +129,7 @@ export interface UpdateAreaData {
   shareImage?: string;
   faqs?: FAQ[];
   specialPrices?: SpecialPrice[];
+  approvalStatus?: 'pending' | 'approved' | 'rejected';
   active?: boolean;
 }
 

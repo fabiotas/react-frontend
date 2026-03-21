@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
+import { Navigate } from 'react-router-dom';
 import { userService } from '../services/userService';
 import { User } from '../types';
 import { useToast } from '../components/Toast';
+import { useAuth } from '../contexts/AuthContext';
 import {
   Users as UsersIcon,
   Plus,
@@ -19,6 +21,7 @@ import {
 } from 'lucide-react';
 
 export default function Users() {
+  const { user } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,10 +38,6 @@ export default function Users() {
     role: 'user' as 'user' | 'admin',
   });
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
   const loadUsers = async () => {
     try {
       const response = await userService.getAllUsers();
@@ -49,6 +48,10 @@ export default function Users() {
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
 
   const handleOpenModal = (user?: User) => {
     if (user) {
@@ -139,6 +142,10 @@ export default function Users() {
       year: 'numeric',
     });
   };
+
+  if (user?.role === 'admin') {
+    return <Navigate to="/admin/users" replace />;
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">

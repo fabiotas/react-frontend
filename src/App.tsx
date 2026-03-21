@@ -2,11 +2,14 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
+import AdminRoute from './components/AdminRoute';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Users from './pages/Users';
+import AdminUsers from './pages/AdminUsers';
+import AdminAreas from './pages/AdminAreas';
 import Profile from './pages/Profile';
 import Areas from './pages/Areas';
 import Bookings from './pages/Bookings';
@@ -15,7 +18,9 @@ import SpecialPrices from './pages/SpecialPrices';
 import ExternalBooking from './pages/ExternalBooking';
 
 function App() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const approvalStatus = user?.approvalStatus ?? 'approved';
+  const canUseApp = isAuthenticated && approvalStatus === 'approved';
 
   if (isLoading) {
     return (
@@ -32,11 +37,11 @@ function App() {
       <Route path="/areas/:id" element={<AreaDetails />} />
       <Route
         path="/login"
-        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Login />}
+        element={canUseApp ? <Navigate to="/dashboard" replace /> : <Login />}
       />
       <Route
         path="/register"
-        element={isAuthenticated ? <Navigate to="/dashboard" replace /> : <Register />}
+        element={canUseApp ? <Navigate to="/dashboard" replace /> : <Register />}
       />
 
       {/* Protected Routes */}
@@ -48,6 +53,10 @@ function App() {
           <Route path="/bookings" element={<Bookings />} />
           <Route path="/external-booking" element={<ExternalBooking />} />
           <Route path="/users" element={<Users />} />
+          <Route element={<AdminRoute />}>
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/areas" element={<AdminAreas />} />
+          </Route>
           <Route path="/profile" element={<Profile />} />
         </Route>
       </Route>

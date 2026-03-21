@@ -50,6 +50,7 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const isNetError = isNetworkError(error);
+    const approvalStatus = error.response?.data?.approvalStatus;
     
     // Adicionar flag para indicar que é erro de conexão
     if (isNetError) {
@@ -65,6 +66,14 @@ api.interceptors.response.use(
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
+    }
+
+    // Conta sem aprovação não pode usar rotas autenticadas
+    if (status === 403 && approvalStatus && !window.location.pathname.includes('/login')) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      const encodedStatus = encodeURIComponent(approvalStatus);
+      window.location.href = `/login?approvalStatus=${encodedStatus}`;
     }
     
     return Promise.reject(error);

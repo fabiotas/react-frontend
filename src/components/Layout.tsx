@@ -2,7 +2,6 @@ import { Outlet, NavLink, useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { 
   LayoutDashboard, 
-  Users, 
   User, 
   LogOut,
   Menu,
@@ -13,6 +12,8 @@ import {
   Shield,
   Tag,
   UserPlus,
+  ClipboardCheck,
+  Map,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { areaService } from '../services/areaService';
@@ -70,7 +71,12 @@ export default function Layout() {
     { to: '/special-prices', icon: Tag, label: 'Preços Especiais' },
     { to: '/bookings', icon: Calendar, label: 'Reservas' },
     ...(hasOwnedAreas ? [{ to: '/external-booking', icon: UserPlus, label: 'Reserva Externa' }] : []),
-    ...(user?.role === 'admin' ? [{ to: '/users', icon: Users, label: 'Usuários' }] : []),
+    ...(user?.role === 'admin'
+      ? [
+          { to: '/admin/users', icon: ClipboardCheck, label: 'Aprovação de Usuários' },
+          { to: '/admin/areas', icon: Map, label: 'Aprovação de Áreas' },
+        ]
+      : []),
     { to: '/profile', icon: User, label: 'Perfil' },
   ];
 

@@ -72,6 +72,22 @@ export default function Register() {
       
       // Redirecionar após 3 segundos para dar tempo de ver a mensagem
       setTimeout(() => {
+        const storedUserRaw = localStorage.getItem('user');
+        let approvalStatus: string | undefined;
+        if (storedUserRaw) {
+          try {
+            const parsed = JSON.parse(storedUserRaw);
+            approvalStatus = parsed?.approvalStatus;
+          } catch {
+            approvalStatus = undefined;
+          }
+        }
+
+        if (approvalStatus && approvalStatus !== 'approved') {
+          navigate(`/login?approvalStatus=${encodeURIComponent(approvalStatus)}`);
+          return;
+        }
+
         navigate('/dashboard');
       }, 3000);
     } catch (err: any) {

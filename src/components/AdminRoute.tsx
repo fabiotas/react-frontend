@@ -2,8 +2,8 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
-export default function PrivateRoute() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+export default function AdminRoute() {
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   if (isLoading) {
     return (
@@ -20,17 +20,9 @@ export default function PrivateRoute() {
     return <Navigate to="/login" replace />;
   }
 
-  const approvalStatus = user?.approvalStatus ?? 'approved';
-  if (approvalStatus !== 'approved') {
-    return (
-      <Navigate
-        to={`/login?approvalStatus=${encodeURIComponent(approvalStatus)}`}
-        replace
-      />
-    );
+  if (user?.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />;
   }
 
   return <Outlet />;
 }
-
-

@@ -54,8 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .then((response) => {
           if (!isCancelled) {
             clearTimeout(timeoutId);
-            setUser(response.data);
-            localStorage.setItem('user', JSON.stringify(response.data));
+            const normalizedUser = {
+              ...response.data,
+              approvalStatus: response.data.approvalStatus ?? 'approved',
+            };
+            setUser(normalizedUser);
+            localStorage.setItem('user', JSON.stringify(normalizedUser));
             setIsLoading(false);
           }
         })
@@ -78,7 +82,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               localStorage.removeItem('user');
               setToken(null);
               setUser(null);
-            } 
+            }
+            // Se usuário não aprovado, limpar sessão e pedir novo login
+            else if (status === 403 && error.response?.data?.approvalStatus) {
+              localStorage.removeItem('token');
+              localStorage.removeItem('user');
+              setToken(null);
+              setUser(null);
+            }
             // Se for erro de rede (backend não disponível), manter dados do localStorage
             // para permitir uso da aplicação mesmo com backend offline
             else if (isNetworkError) {
@@ -116,10 +127,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (response.success) {
       const { user: userData, token: userToken } = response.data;
-      setUser(userData);
+      const normalizedUser = {
+        ...userData,
+        approvalStatus: userData.approvalStatus ?? 'approved',
+      };
+      setUser(normalizedUser);
       setToken(userToken);
       localStorage.setItem('token', userToken);
-      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
     } else {
       throw new Error(response.message);
     }
@@ -130,10 +145,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     if (response.success) {
       const { user: userData, token: userToken } = response.data;
-      setUser(userData);
+      const normalizedUser = {
+        ...userData,
+        approvalStatus: userData.approvalStatus ?? 'approved',
+      };
+      setUser(normalizedUser);
       setToken(userToken);
       localStorage.setItem('token', userToken);
-      localStorage.setItem('user', JSON.stringify(userData));
+      localStorage.setItem('user', JSON.stringify(normalizedUser));
     } else {
       throw new Error(response.message);
     }
@@ -149,8 +168,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateUser = (updatedUser: User) => {
-    setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    const normalizedUser = {
+      ...updatedUser,
+      approvalStatus: updatedUser.approvalStatus ?? 'approved',
+    };
+    setUser(normalizedUser);
+    localStorage.setItem('user', JSON.stringify(normalizedUser));
   };
 
   return (

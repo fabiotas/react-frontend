@@ -2,6 +2,14 @@ import api from './api';
 import { isNetworkError } from './api';
 import { AuthResponse, LoginCredentials, RegisterData, User, ApiResponse, UpdateUserData } from '../types';
 
+export type AccountApprovalStatus = 'pending' | 'approved' | 'rejected' | 'blocked';
+
+export interface ApprovalErrorResponse {
+  success: false;
+  message: string;
+  approvalStatus: Exclude<AccountApprovalStatus, 'approved'>;
+}
+
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {

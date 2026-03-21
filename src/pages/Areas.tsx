@@ -233,20 +233,28 @@ export default function Areas() {
                         {area.address}
                       </p>
                     </div>
-                    <span
-                      className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                        area.active
-                          ? 'bg-primary-100 text-primary-700'
-                          : 'bg-red-100 text-red-700'
-                      }`}
-                    >
-                      {area.active ? (
-                        <CheckCircle className="w-3 h-3" />
-                      ) : (
-                        <XCircle className="w-3 h-3" />
+                    <div className="flex flex-col items-end gap-1">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                          area.active
+                            ? 'bg-primary-100 text-primary-700'
+                            : 'bg-red-100 text-red-700'
+                        }`}
+                      >
+                        {area.active ? (
+                          <CheckCircle className="w-3 h-3" />
+                        ) : (
+                          <XCircle className="w-3 h-3" />
+                        )}
+                        {area.active ? 'Ativa' : 'Inativa'}
+                      </span>
+                      {area.approvalStatus && area.approvalStatus !== 'approved' && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          {area.approvalStatus === 'pending' && 'Aprovação pendente'}
+                          {area.approvalStatus === 'rejected' && 'Aprovação reprovada'}
+                        </span>
                       )}
-                      {area.active ? 'Ativa' : 'Inativa'}
-                    </span>
+                    </div>
                   </div>
 
                   <p className="text-neutral-600 text-sm line-clamp-2">

@@ -18,6 +18,8 @@ export default function Profile() {
   const { user, updateUser } = useAuth();
   const { showToast, ToastContainer } = useToast();
 
+  const approvalStatus = user?.approvalStatus ?? 'approved';
+
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
     email: user?.email || '',
@@ -92,6 +94,19 @@ export default function Profile() {
     });
   };
 
+  const approvalBadge = (() => {
+    switch (approvalStatus) {
+      case 'pending':
+        return { label: 'Aguardando aprovação', className: 'bg-yellow-100 text-yellow-800' };
+      case 'rejected':
+        return { label: 'Cadastro não aprovado', className: 'bg-red-100 text-red-800' };
+      case 'blocked':
+        return { label: 'Conta bloqueada', className: 'bg-neutral-800 text-white' };
+      default:
+        return { label: 'Aprovado', className: 'bg-primary-100 text-primary-800' };
+    }
+  })();
+
   return (
     <div className="max-w-4xl mx-auto space-y-8">
       <ToastContainer />
@@ -135,6 +150,9 @@ export default function Profile() {
               }`}>
                 <Shield className={`w-3.5 h-3.5 ${user?.role === 'admin' ? 'text-purple-700' : ''}`} />
                 {user?.role === 'admin' ? 'Administrador' : 'Usuário'}
+              </span>
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold ${approvalBadge.className}`}>
+                {approvalBadge.label}
               </span>
               <span className="inline-flex items-center gap-1.5 text-neutral-500 text-xs">
                 <Calendar className="w-3 h-3" />

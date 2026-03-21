@@ -3,6 +3,12 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Mail, Lock, LogIn, Leaf, Loader2 } from 'lucide-react';
 
+const approvalStatusMessageMap = {
+  pending: 'Aguardando aprovação do administrador',
+  rejected: 'Cadastro não aprovado',
+  blocked: 'Conta bloqueada',
+} as const;
+
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -15,6 +21,9 @@ export default function Login() {
   // Pegar a rota de retorno do state ou usar dashboard como padrão
   const returnTo = (location.state as { returnTo?: string })?.returnTo || '/dashboard';
   const message = (location.state as { message?: string })?.message;
+  const queryParams = new URLSearchParams(location.search);
+  const queryApprovalStatus = queryParams.get('approvalStatus') as keyof typeof approvalStatusMessageMap | null;
+  const accountStatusMessage = queryApprovalStatus ? approvalStatusMessageMap[queryApprovalStatus] : '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,6 +34,13 @@ export default function Login() {
       await login({ email, password });
       navigate(returnTo);
     } catch (err: any) {
+      const approvalStatus = err?.response?.data?.approvalStatus as keyof typeof approvalStatusMessageMap | undefined;
+
+      if (err?.response?.status === 403 && approvalStatus) {
+        setError(approvalStatusMessageMap[approvalStatus] || 'Sua conta ainda não pode acessar o sistema.');
+        return;
+      }
+
       // Verificar se é erro de conexão
       const isNetworkError = 
         !err.response || 
@@ -65,6 +81,11 @@ export default function Login() {
             {message && (
               <div className="p-4 rounded-xl bg-primary-50 border border-primary-200 text-primary-700 text-sm animate-fade-in">
                 {message}
+              </div>
+            )}
+            {accountStatusMessage && (
+              <div className="p-4 rounded-xl bg-yellow-50 border border-yellow-200 text-yellow-700 text-sm animate-fade-in">
+                {accountStatusMessage}
               </div>
             )}
             {error && (
